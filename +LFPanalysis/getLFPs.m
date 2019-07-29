@@ -26,7 +26,7 @@ srate=1250;
 
 stf=round(500/(1000/srate)); % start tf before marker
 etf=round(500/(1000/srate)); % end tf, after marker
-tsec = (-stf+1 : etf) * 1000/srate;
+tsec = (-stf : etf) * 1000/srate;
 
 switch Chans
     case 'Layers'
@@ -62,7 +62,7 @@ for x =animals
         end
         fName=char(r(exp).lfpNames);
         disp(['#-------- ' fName ' --------#'])
-        lfp = readLFP([LFPpath, fName]);
+        lfp = readLFP(fullfile(LFPpath, fName));
 
         for gNum= 1:numel(conditions) % gratings
             trialNrs=find([r(exp).gratTrials.grat_num]==gNum); % the trials 

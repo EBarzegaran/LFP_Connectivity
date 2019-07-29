@@ -9,18 +9,19 @@ mac = true;
 if mac
     addpath(genpath('/Users/elhamb/switchdrive/Institution/Codes'));
     addpath(genpath('/Users/elhamb/Documents/Codes/Git/EEGSourceSim'));
+    MainDir = '/Users/elhamb/switchdrive/Institution/Data/mouseV1_prep';
 else
     addpath(genpath('E:\Elham\Codes\Git\EEGSourceSim')); % I use some functions from here
     addpath(genpath('E:\Elham\Codes\NonGit\mvgc_v1.0'));
     addpath(genpath('C:\Users\Barzegar\switchdrive\Institution\Codes\dynet_toolbox-master-'));
+    MainDir = fileparts(mfilename('fullpath'));
 end
 
 % Set the paths
-MainDir = fileparts(mfilename('fullpath'));
 LFPpath = fullfile(MainDir,'data','LFPs'); % path of the original LFP files
 Projfolder = fullfile(MainDir,'data','bipLFPs');% path to LFP bipolar data
 infofile = fullfile(MainDir,'data','dInfo','dInfoCombined.mat'); % session info files
-addpath(genpath(MainDir));
+addpath(genpath(fileparts(mfilename('fullpath'))));
 
 %% extract the full dataset (all channels included)
 LFPanalysis.getLFPs(LFPpath,infofile,Projfolder,'Layers');
@@ -38,6 +39,6 @@ LFPanalysis.visualizeLFP(Projfolder,'savefig',true,'figpath',fullfile(Projfolder
 ModOrds = LFPanalysis.FindModelOrder(Projfolder,'recalc',true);
 %%
 % (2) estimate pdc based on MVAR coefficients
-LFPanalysis.EstimatePDC_STOK(Projfolder);
+LFPanalysis.EstimatePDC_STOK(Projfolder,'Normalize','Channel','recalc',false);
 %%
 
