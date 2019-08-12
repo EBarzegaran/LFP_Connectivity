@@ -37,8 +37,8 @@ LFPanalysis.visualizeLFP(Projfolder,'savefig',true,'figpath',fullfile(Projfolder
 
 % (1) Find optimal model order for parametric methods: I start with stoc algorithm
 ModOrds = LFPanalysis.FindModelOrder(Projfolder,'recalc',true);
-%%
+%% Estimate PDC, calculate statistics based on permutation test
 % (2) estimate pdc based on MVAR coefficients
-LFPanalysis.EstimatePDC_STOK(Projfolder,'Normalize','Channel','recalc',false);
+LFPanalysis.EstimatePDC_STOK(Projfolder,'Normalize','Channel','recalc',false,'plotfig',false);
 %%
 
