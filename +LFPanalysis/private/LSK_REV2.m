@@ -39,7 +39,7 @@ KF = dynet_SSM_STOK(data,M_ord,l);
 
 % Option 2: Y observed and one step prediction error
 data(:,:,1:M_ord) = [];
-KF.PYe(:,:,1:M_ord) = [];
+KF.PY(:,:,1:M_ord) = [];
 MSE2 = mean((KF.PY(:)).^2);
 MSY2 = mean(data(:).^2);
 REV = MSE2 / MSY2;

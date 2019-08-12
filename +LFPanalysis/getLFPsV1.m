@@ -1,4 +1,4 @@
-function get_LFPs(LFPpath,infoPath,savePath,Chans)
+function getLFPsV1(LFPpath,infoPath,savePath,Chans)
 % retrieve LFP epochs  
 % per animal, conditions 
 % save 

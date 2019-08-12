@@ -1,4 +1,4 @@
-function [ModOrds] = FindModelOrder(Projfolder,varargin)
+function [ModOrds] = FindModelOrderV1(Projfolder,varargin)
 % determine optimal p for Kalman based state space modeling using saved data, no high-pass
 % Author: Plomp
     % Latest modification: Elham Barzegaran
