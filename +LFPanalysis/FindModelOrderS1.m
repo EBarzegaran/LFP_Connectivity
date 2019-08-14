@@ -8,8 +8,8 @@ function [ModOrds] = FindModelOrderS1(Projfolder,varargin)
         'plotfig'  ,true, ...
         'maxorder' ,30,...
         'minorder' ,1,...
-        'recalc'     ,false, ...
-        'figpath'  ,fullfile(fileparts(fileparts(Projfolder)),'Results') ...
+        'recalc'     ,true, ...
+        'figpath'  ,fullfile(Projfolder,'Results') ...
         );
 
     animals = dir(fullfile(Projfolder,'*Layers.mat')); % files in the project folder
@@ -21,7 +21,7 @@ function [ModOrds] = FindModelOrderS1(Projfolder,varargin)
     xticks = linspace (0,1250,numel(xticklabels));
     disp('Estimating optimal model orders:');
     
-    if ~exist(fullfile(Projfolder,['ModelOrders']),'file') || opt.recalc
+    if ~exist(fullfile(Projfolder,'ModelOrders.mat'),'file') || opt.recalc
         for subj = 1:numel(animals)
             disp(animID{subj});
             LFP = load(fullfile(Projfolder,animals{subj}),'lfpRat');
@@ -32,67 +32,57 @@ function [ModOrds] = FindModelOrderS1(Projfolder,varargin)
             % QUESTION: which part of data should be used? i.e. which time window
 
             epochs = permute(LFP.lfpRat(:,:,:), [3,2,1]); %trials, nodes, time
-%             [a,b] = tsdata_to_infocrit(permute(epochs(:,1:6,:),[2 1 3]),opt.maxorder,'LWR',false); % stationary
-%             aic(:,1) = a; bic(:,1)=b;
-%             [a,b] = tsdata_to_infocrit(permute(epochs(:,7:12,:),[2 1 3]),opt.maxorder,'LWR',false) ; % stationary
-%             aic(:,2) = a; bic(:,2)=b;
             ff  = 0.99;
             for p =opt.minorder:opt.maxorder
-                if mod(p,3)==0, disp([num2str(round((p-opt.minorder)/(opt.maxorder-opt.minorder)*100)) ' %']);end
-                REV1(p,1) = LSK_REV1(epochs(:,1:6,:), p, ff);    % Y-Y'
-                REV2(p,1) = LSK_REV2(epochs(:,1:6,:), p, ff);    % using model residuals
-                REV1(p,2) = LSK_REV1(epochs(:,7:12,:), p, ff);    % Y-Y'
-                REV2(p,2) = LSK_REV2(epochs(:,7:12,:), p, ff);    % using model residuals
+                if mod(p,round((opt.maxorder-opt.minorder)/10))==1, disp([num2str(round((p-opt.minorder)/(opt.maxorder-opt.minorder)*100)) ' %']);end
+                REV1(p,1) = LSK_REV1(epochs(1:6,1:6,:), p, ff);    % Y-Y'
+                REV2(p,1) = LSK_REV2(epochs(1:6,1:6,:), p, ff);    % using model residuals
+                REV1(p,2) = LSK_REV1(epochs(7:12,7:12,:), p, ff);    % Y-Y'
+                REV2(p,2) = LSK_REV2(epochs(7:12,7:12,:), p, ff);    % using model residuals
             end
             ModOrds.(animID{subj}).REV1 = REV1;
             ModOrds.(animID{subj}).REV2 = REV2;
-%             ModOrds.(animID{subj}).aic = aic;
-%             ModOrds.(animID{subj}).bic = bic;
+
         end
 
-        save(fullfile(Projfolder,['ModelOrders']),'ModOrds');
+        save(fullfile(Projfolder,'ModelOrders.mat'),'ModOrds','opt');
     else
-        load(fullfile(Projfolder,['ModelOrders']));
+        load(fullfile(Projfolder,'ModelOrders.mat'));
     end
     % add a saving option, since it is slow to estimate the model orders
  %%   Plot the results
  
  ROIs = {'cS1','iS1'};
     if opt.plotfig
-        Fig = figure;
+        
         for l = 1:2
+            Fig = figure;
             for subj = 1:numel(animals)
                 subplot(2,3,subj);
                 Fields = fields(ModOrds.(animID{subj}));
                 % first REV1 and REV2
-                sp(1) = plot(Normalize(1-ModOrds.(animID{subj}).REV1(:,l)),'r');
-                hold on; sp(2) = plot(Normalize(1-ModOrds.(animID{subj}).REV2(:,l)),'b');
-                % plot aic and bic
-%                 sp(3) = plot(Normalize(ModOrds.(animID{subj}).aic(:,l)),'g');
-%                sp(4) = plot(Normalize(ModOrds.(animID{subj}).bic(:,l)),'k');
+                sp(1) = plot(opt.minorder:opt.maxorder,Normalize(1-ModOrds.(animID{subj}).REV1(opt.minorder:opt.maxorder,l)),'r');
+                hold on; sp(2) = plot(opt.minorder:opt.maxorder,Normalize(1-ModOrds.(animID{subj}).REV2(opt.minorder:opt.maxorder,l)),'b');
 
                % axis control 
-                ylim([-1.2 1.2]);
-                xlim([1 opt.maxorder]);
-                line([1 opt.maxorder], [0 0],'color','k','linestyle','--')
+                ylim([-0 1.2]);
+                xlim([opt.minorder opt.maxorder]);
+                line([opt.minorder opt.maxorder], [0 0],'color','k','linestyle','--')
                 set(gca,'yticklabels',[]);
-
-%                [~,I1] = min(Normalize(ModOrds.(animID{subj}).aic(:,l)));
-%                [~,I2] = min(Normalize(ModOrds.(animID{subj}).bic(:,l)));
-%                 vline2([I1 I2],{'--g','--k'});
 
                [~,I1] = max(Normalize(1-ModOrds.(animID{subj}).REV1(:,l)));
                [~,I2] = max(Normalize(1-ModOrds.(animID{subj}).REV2(:,l)));
-                vline2([I1 I2],{'--r','--b'});
+               xind = opt.minorder:opt.maxorder;
+                vline2([xind(I1) xind(I2)],{'--r','--b'});
 
                 title([strrep(animID{subj},'_','-') ]);
                 % Plot legends and info on model orders
                 if subj==numel(animals)
-                    LG = legend(sp,Fields(1:4));
+                    LG = legend(sp,Fields(1:2));
                 end  
             end
 
-            set(Fig,'unit','inch','position',[0 0 20 15],'color','w');
+            set(Fig,'unit','inch','position',[0 0 12 8],'color','w');
             export_fig(Fig,fullfile(opt.figpath,['ModelOrders' '_' ROIs{l}]),'-pdf');
            
         end

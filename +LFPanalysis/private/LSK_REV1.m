@@ -32,8 +32,8 @@ KF.PY(:,:,1:M_ord) = [];
 MSE = mean((data(:)-Yest(:)).^2);
 MSY = mean(data(:).^2);
 
-MSE = var(data(:)-Yest(:));
-MSY = var(data(:));
+% MSE = var(data(:)-Yest(:));
+% MSY = var(data(:));
 
 REV = MSE / MSY;
 % end option 1
