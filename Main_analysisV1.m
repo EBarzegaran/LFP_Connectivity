@@ -25,17 +25,25 @@ addpath(genpath(fileparts(mfilename('fullpath'))));
 
 %% extract the full dataset (all channels included)
 LFPanalysis.getLFPsV1(LFPpath,infofile,Projfolder,'Layers');
+
 %% visualize LFP data
-LFPanalysis.visualizeLFP(Projfolder,    'savefig',true, 'figpath',fullfile(Projfolder,'Results'));
+LFPanalysis.visualizeLFP(Projfolder,...
+    'savefig',true,...
+    'figpath',fullfile(Projfolder,'Results'));
 
 %% Run parametric and non-parametric connectivity analysis and compare the results
 
 % (1) Find optimal model order for parametric methods: I start with stoc algorithm
-ModOrds = LFPanalysis.FindModelOrderV1(Projfolder,'recalc',true);
+ModOrds = LFPanalysis.FindModelOrderV1(Projfolder,...
+    'recalc',true);
+
 %% Estimate PDC, calculate statistics based on permutation test
 % (2) estimate pdc based on MVAR coefficients
-LFPanalysis.EstimatePDC_STOK(Projfolder,    'Normalize','Channel',  'recalc',true,  'plotfig',false);
+LFPanalysis.EstimatePDC_STOKV1(Projfolder,...
+    'Normalize','Channel',...
+    'recalc',true,...
+    'plotfig',false);
 
-%% other analysis: all channels-> decomposition like SSD, RCA and etc.
+%% other analysis: all channels-> Decompositions like SSD, RCA and etc.
 % decide later if you want to implement this
 

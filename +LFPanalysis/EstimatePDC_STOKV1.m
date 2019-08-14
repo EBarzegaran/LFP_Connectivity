@@ -1,4 +1,4 @@
-function [PDC, fvec] = EstimatePDC_STOK(Projfolder,varargin)
+function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
 
 %% set default values
     opt = ParseArgs(varargin, ...

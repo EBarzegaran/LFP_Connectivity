@@ -40,7 +40,7 @@ function [PDC, fvec] = EstimatePDC_STOKS1(Projfolder,varargin)
             % (2) prepare the parameters
             ff=.99;
             keepdiag = 1; % 
-            measure='sPDC';
+            measure='PDCnn';
             flow = 2; % 1 col, 2 row-wise normalization
             fvec=1:150;
             load(fullfile(Projfolder,animals{subj}),'srate');
