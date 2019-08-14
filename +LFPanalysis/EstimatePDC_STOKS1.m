@@ -7,7 +7,7 @@ function [PDC, fvec] = EstimatePDC_STOKS1(Projfolder,varargin)
         'Cnd'      , 6, ...
         'recalc'   ,false, ...
         'Normalize','All',...
-        'Freqband' , [1 100],...
+        'Freqband' , [5 80],...
         'SStat'    ,'Paired',...
         'doPermute', false,...
         'typePermute','layers',...
@@ -29,7 +29,7 @@ function [PDC, fvec] = EstimatePDC_STOKS1(Projfolder,varargin)
     if ~exist(fullfile(Projfolder,['PDCSTOK' '.mat']),'file') || opt.recalc
         for subj = 1:numel(animals)
             
-            %---------------------- Load required Data --------------------
+            %---------------------- Load the Data --------------------
             disp(animID{subj});
             LFP = load(fullfile(Projfolder,animals{subj}),'lfpRat');
             load(fullfile(Projfolder,animals{subj}),'tsec');
@@ -77,39 +77,42 @@ function [PDC, fvec] = EstimatePDC_STOKS1(Projfolder,varargin)
                 end
                 Data = Data./max(Data(:));
             end
-            % base-line correction? does it make sense here?
-            Databm = repmat(mean(Data(:,:,:,:),4),[1 1 1 size(Data,4)]);
-            Databs = repmat(std(Data(:,:,:,:),[],4),[1 1 1 size(Data,4)]);
-            Datap = Data; %(Data-Databm)./Databs;
+            % base-line correction? Does it make sense here?
+            Databm  =   repmat(mean(Data(:,:,:,:),4),[1 1 1 size(Data,4)]);
+            Databs  =   repmat(std(Data(:,:,:,:),[],4),[1 1 1 size(Data,4)]);
+            Datap   =   Data; %(Data-Databm)./Databs;
             %plot individual animal resaults
-            FIG = dynet_connplot(Datap(1:6,1:6,:,:),tsec,fvec(opt.Freqband(1):opt.Freqband(2)),labels, [], [], [],0);
-            set(FIG,'unit','inch','position',[0 0 35 20],'color','w')
-            export_fig(FIG,fullfile(opt.figpath,['STOKPDC_' animID{subj} '_normalize_' opt.Normalize '_cS1']),'-pdf');
-            
-            FIG = dynet_connplot(Datap(7:12,7:12,:,:),tsec,fvec(opt.Freqband(1):opt.Freqband(2)),labels, [], [], [],0);
-            set(FIG,'unit','inch','position',[0 0 35 20],'color','w')
-            export_fig(FIG,fullfile(opt.figpath,['STOKPDC_' animID{subj} '_normalize_' opt.Normalize '_iS1']),'-pdf');
+            if false
+                FIG = dynet_connplot(Datap(1:6,1:6,:,:),tsec,fvec(opt.Freqband(1):opt.Freqband(2)),labels, [], [], [],0);
+                set(FIG,'unit','inch','position',[0 0 35 20],'color','w')
+                export_fig(FIG,fullfile(opt.figpath,['STOKPDC_' animID{subj} '_normalize_' opt.Normalize '_cS1']),'-pdf');
+
+                FIG = dynet_connplot(Datap(7:12,7:12,:,:),tsec,fvec(opt.Freqband(1):opt.Freqband(2)),labels, [], [], [],0);
+                set(FIG,'unit','inch','position',[0 0 35 20],'color','w')
+                export_fig(FIG,fullfile(opt.figpath,['STOKPDC_' animID{subj} '_normalize_' opt.Normalize '_iS1']),'-pdf');
+            end
             close all;
             
             DataM(:,:,:,:,subj) = Data;%(Data-Databm)./Databs;
         end
         
         % plot average over all animals
-        Data = mean(DataM(1:6,1:6,:,:,:),5);
-        FIG = dynet_connplot(Data./max(Data(:)),tsec,fvec(opt.Freqband(1):opt.Freqband(2)),labels, [], [], [],0);
+        TimeInd = (tsec>=-50);
+        Data = mean(DataM(1:6,1:6,:,TimeInd,:),5);
+        FIG = dynet_connplot(Data./max(Data(:)),tsec(TimeInd),fvec(opt.Freqband(1):opt.Freqband(2)),labels, [], [], [],0);
         set(FIG,'unit','inch','position',[0 0 35 20],'color','w')
         export_fig(FIG,fullfile(opt.figpath,['STOKPDC_AverageAll_normalize_' opt.Normalize '_cS1']),'-pdf');
         
-        Data = mean(DataM(7:12,7:12,:,:,:),5);
-        FIG = dynet_connplot(Data./max(Data(:)),tsec,fvec(opt.Freqband(1):opt.Freqband(2)),labels, [], [], [],0);
+        Data = mean(DataM(7:12,7:12,:,TimeInd,:),5);
+        FIG = dynet_connplot(Data./max(Data(:)),tsec(TimeInd),fvec(opt.Freqband(1):opt.Freqband(2)),labels, [], [], [],0);
         set(FIG,'unit','inch','position',[0 0 35 20],'color','w')
         export_fig(FIG,fullfile(opt.figpath,['STOKPDC_AverageAll_normalize_' opt.Normalize '_iS1']),'-pdf');
-        % generate a movie for average FC? (Maybe gamma [50 100])        
+              
     end
     
     %% estimate UPWARD and DOWNWARD FCs
     clear DataM
-    for subj = 1:numel(animals)-1 % On each animal separately
+    for subj = 1:numel(animals)% Aggregate animals data
         
         Data = PDC.(animID{subj})(:,:,opt.Freqband(1):opt.Freqband(2),:);
         for ch = 1:size(Data,1)
@@ -117,11 +120,10 @@ function [PDC, fvec] = EstimatePDC_STOKS1(Projfolder,varargin)
         end
         Data = Data./max(Data(:));      
         DataM(:,:,:,:,subj) = Data;
-        
-    end
-    
+    end 
     
     Data = mean(DataM(:,:,:,:,:),5);
+    
     % (1) node-wise
 %     Diff = arrayfun(@(x) squeeze(mean(Data(x,x:end,:,:),2) - mean(Data(x,1:x,:,:),2)),1:size(Data,1),'uni',false);%./squeeze(mean(Data(x,x:end,:,:),2) + mean(Data(x,1:x,:,:),2)),1:size(Data,1),'uni',false);
 % 
@@ -150,37 +152,21 @@ function [PDC, fvec] = EstimatePDC_STOKS1(Projfolder,varargin)
             Nperm = opt.NPerm;
         end
         
-        PermFileName = fullfile(Projfolder,['PDCSTOK_Cnd' num2str(opt.Cnd) '_PermuteState_' opt.typePermute '.mat']);
+        PermFileName = fullfile(Projfolder,['PDCSTOK_PermuteState_' opt.typePermute '_' opt.SStat '.mat']);
         if ~exist(PermFileName,'file') || opt.doPermute
-            tic
+            %tic
             for p = 1:Nperm % for each permutation:
-                if mod(p,1)==0, disp(p); end
-                
+                if mod(p,3)==0, disp(p); end
                 if strcmpi(opt.typePermute,'layers')% Permute layers
                     Ps = Perms(p,:);
                     Ps = [Ps Ps+LNum/2];
                     Datap = Data(Ps,Ps,:,:); 
                 elseif strcmpi(opt.typePermute,'all')% Permute all FC values
-                    RI = randperm(LNum*(LNum-1),LNum*(LNum-1));
-                    OI = 1:30;
-                    OIorig = reshape(1:LNum*LNum,LNum,LNum); 
-                    RIorig = OIorig;
-                    ind = 1;
-                    for i = 1:LNum
-                        for j = 1:LNum
-                            if i~=j
-                                IndR(j,i) = RI(ind);
-                                IndO(j,i) = OI(ind);
-                                ind = ind+1;       
-                            end
-                        end
+                    if p~=Nperm
+                        Datap = PermuteElements(Data,LNum);
+                    else
+                        Datap = Data;
                     end
-                    for i = 1:numel(IndR)
-                        RIorig(find(IndO==i)) = OIorig(find(IndR==i));
-                    end
-                    
-                    Datat = reshape(Data,LNum*LNum,size(Data,3),size(Data,4));
-                    Datap = reshape(Datat(reshape(RIorig,LNum*LNum,1),:,:),LNum,LNum,size(Data,3),size(Data,4)); 
                 end
                 % Calculate directionality of FCs, and generate the null (random) distribution
                 for t = 16:size(Data,4)
@@ -199,7 +185,7 @@ function [PDC, fvec] = EstimatePDC_STOKS1(Projfolder,varargin)
                         end
                     end
                 end
-                toc
+                %toc
             end
 
             % Indicate p-values for each point in time and frequency, based
@@ -246,25 +232,27 @@ for l = 1:2
     FIG = figure;
     %UpwardN(abs(UpwardN)<.05)=0;
     imagesc(UpwardN(:,:,end,l),'alphadata',((PvalsU(:,:,end,l)<0.05)+(PvalsD(:,:,end,l)<0.05))*.8+.2); axis xy;
+    %imagesc(UpwardN(:,:,end,l));
     % Set figure designations
-    tTicks = -300:100:300;
+    tTicks = -100:20:100;
     [~,Ind]=ismember(tTicks,tsec);
-    vline(Ind(4),'k--')
+    vline(Ind(6),'k--')
     set(gca,'xtick',Ind,'xticklabel',tsec(Ind));
     axis xy
     %colormap(jmaColors('coolhotcortex'));
     colormap('jet');
-    caxis([-0.8 .8]/2)    
+    caxis([-3 3])    
     xlabel('Time(mSec)');
     ylabel('Frequency(Hz)');
-    xlim([20 751])
+    %xlim([20 751])
 
     colorbar;
-    text(760,155,'Upward','color','r','fontweight','bold')
+    text(760,255,'Upward','color','r','fontweight','bold')
     text(760,-5,'Downward','color','b','fontweight','bold')
     set(FIG,'unit','inch','position',[1 4 15 5])
-    export_fig(FIG,fullfile(opt.figpath,['UPDOWN_STOKPDC_AverageAll_permcorrection' opt.Normalize '_' ROIs{l}]),'-pdf');
+    export_fig(FIG,fullfile(opt.figpath,['UPDOWN_STOKPDC_AverageAll_permcorrection' opt.Normalize '_' ROIs{l} '_' opt.SStat]),'-pdf');
 end    
+
     
     %% What about bootstrapping
     
@@ -276,5 +264,29 @@ end
     
 end
 
+%% Extra functions
+function Datap = PermuteElements(Data,LNum)
+%  this function permutes Laminar LFP data, where Data is a
+%  LNUMxLNUMxFreqxTime matrix
+    RI = randperm(LNum*(LNum-1),LNum*(LNum-1));
+    OI = 1:30;
+    OIorig = reshape(1:LNum*LNum,LNum,LNum); 
+    RIorig = OIorig;
+    ind = 1;
+    for i = 1:LNum
+        for j = 1:LNum
+            if i~=j
+                IndR(j,i) = RI(ind);
+                IndO(j,i) = OI(ind);
+                ind = ind+1;       
+            end
+        end
+    end
+    for i = 1:numel(IndR)
+        RIorig(find(IndO==i)) = OIorig(find(IndR==i));
+    end
 
+    Datat = reshape(Data,LNum*LNum,size(Data,3),size(Data,4));
+    Datap = reshape(Datat(reshape(RIorig,LNum*LNum,1),:,:),LNum,LNum,size(Data,3),size(Data,4)); 
+end
 
