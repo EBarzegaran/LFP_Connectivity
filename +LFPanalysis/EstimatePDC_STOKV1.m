@@ -2,6 +2,7 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
 
 %% set default values
     opt = ParseArgs(varargin, ...
+        'IDs'       ,[],...
         'plotfig'  ,true, ...
         'ModOrds'  ,15,...
         'Cnd'      , 6, ...
@@ -10,13 +11,19 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
         'Freqband' , [5 150],...
         'doPermute', true,...
         'typePermute','all',...
-        'TimeWin'  , [-300 300],...
+        'TimeWin'  , [-200 300],...
         'figpath'  ,fullfile(fileparts(fileparts(Projfolder)),'Results') ...
         );
 
     animals = dir(fullfile(Projfolder,'*Layers.mat')); % files in the project folder
     animals = {animals.name};
     animID = cellfun(@(x) x(1:6),animals,'uni',false); % animal IDs
+    
+    if ~isempty(opt.IDs) % if a subset of animals are selected
+        animIdx = strcmp(animID,opt.IDs);
+        animID = animID(animIdx);
+        animals = animals(animIdx);
+    end
     
     opt.Freqband = round(opt.Freqband); % Round the frequency band for now
     
@@ -42,6 +49,7 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
             ff=.99;
             keepdiag = 1; % 
             measure='sPDC';
+            %measure='PDCnn';
             flow = 2; % 1 col, 2 row-wise normalization
             fvec=1:150;
             load(fullfile(Projfolder,animals{subj}),'srate');
@@ -65,9 +73,11 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
         if ~exist(opt.figpath,'dir')
             mkdir(opt.figpath);
         end
-        
+        tvec = (tsec>=-100) & (tsec<=opt.TimeWin(2));
+        tsec = tsec(tvec);
+            
         for subj = 1:numel(animals)
-            Data = PDC.(animID{subj})(:,:,opt.Freqband(1):opt.Freqband(2),:);
+            Data = PDC.(animID{subj})(:,:,opt.Freqband(1):opt.Freqband(2),tvec);
             % what kind of normalization to be done
             if strcmpi(opt.Normalize,'Channel')% (1) normalize over every single channel
                 Data = Data./repmat(max(max(Data,[],4),[],3),[1 1 size(Data,3) size(Data,4)]); 
@@ -79,13 +89,13 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
                 Data = Data./max(Data(:));
             end
             % base-line correction? does it make sense here?
-            Databm = repmat(mean(Data(:,:,:,100:376),4),[1 1 1 size(Data,4)]);
-            Databs = repmat(std(Data(:,:,:,100:376),[],4),[1 1 1 size(Data,4)]);
+            % Databm = repmat(mean(Data(:,:,:,100:376),4),[1 1 1 size(Data,4)]);
+            % Databs = repmat(std(Data(:,:,:,100:376),[],4),[1 1 1 size(Data,4)]);
             Datap = Data; %(Data-Databm)./Databs;
-            plot individual animal resaults
+            %plot individual animal resaults
             FIG = dynet_connplot(Datap,tsec,fvec(opt.Freqband(1):opt.Freqband(2)),labels, [], [], [],0);
             set(FIG,'unit','inch','position',[0 0 35 20],'color','w')
-            export_fig(FIG,fullfile(opt.figpath,['STOKPDC_' animID{subj} '_normalize_' opt.Normalize]),'-pdf');
+            %export_fig(FIG,fullfile(opt.figpath,['STOKPDC_' animID{subj} '_normalize_' opt.Normalize '_modelOrd_' num2str(opt.ModOrds)]),'-pdf');
             close all;
             
             DataM(:,:,:,:,subj) = Data;%(Data-Databm)./Databs;
@@ -93,7 +103,7 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
         
         % plot average over all animals
         Data = mean(DataM(:,:,:,:,:),5);
-        FIG = dynet_connplot(Data./max(Data(:)),linspace(-300,300,size(PDC.mID_40,4)),fvec(opt.Freqband(1):opt.Freqband(2)),labels, [], [], [],0);
+        FIG = dynet_connplot((Data./max(Data(:))),linspace(-100,opt.TimeWin(2),size(PDC.mID_40,4)),fvec(opt.Freqband(1):opt.Freqband(2)),labels, [], [], [],0);
         set(FIG,'unit','inch','position',[0 0 35 20],'color','w')
         export_fig(FIG,fullfile(opt.figpath,['STOKPDC_AverageAll_normalize_' opt.Normalize]),'-pdf');
         
@@ -102,6 +112,7 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
     end
     
     %% estimate UPWARD and DOWNWARD FCs
+    % Average the data
     clear DataM
     for subj = 1:numel(animals)-1 % On each animal separately
         
@@ -113,27 +124,139 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
         DataM(:,:,:,:,subj) = Data;
         
     end
-    
-    
     Data = mean(DataM(:,:,:,:,:),5);
-    % (1) node-wise
-%     Diff = arrayfun(@(x) squeeze(mean(Data(x,x:end,:,:),2) - mean(Data(x,1:x,:,:),2)),1:size(Data,1),'uni',false);%./squeeze(mean(Data(x,x:end,:,:),2) + mean(Data(x,1:x,:,:),2)),1:size(Data,1),'uni',false);
-% 
-%     Fig = figure;
-%     for i = 1:numel(Diff)
-% 
-%         subplot(numel(Diff),1,i),
-%         imagesc(Diff{i});
-%         caxis([-max(abs(Diff{i}(:))) max(abs(Diff{i}(:)))]);
-%         colorbar
-%         axis xy;
-%         if i==1
-%             title('Input')
-%         end
-%     end
-% 
-%     colormap('jet')
-   
+    
+    %% (1) node-wise analysis
+    load('LayerColors.mat');
+    LNames = arrayfun(@(x) ['L' num2str(x)],1:6,'uni',false);
+    %-----------------------Nodes Inflows-----------------------------------
+    if false
+        Fig1 = figure;
+        for i = 1:size(Data,1)
+            subplot(size(Data,1),1,i);
+            for j  = 1:size(Data,2)
+                SP(j)=plot(tsec,squeeze(mean(Data(i,j,:,:),3)),'color',Colors(j,:),'linewidth',2);
+                hold on;
+            end
+            title(['L' num2str(i)]);
+            xlim([-100 300])
+            ylim([0 0.16])
+            vline2([0 37.5],{'k--','b--'})
+        end
+        legend(SP,LNames);
+        xlabel('Time (ms)');
+        set(Fig1,'unit','inch','position',[2 0 20 20],'color','w')
+        export_fig(Fig1,fullfile(opt.figpath,['STOKPDC_NodesInflow' opt.Normalize]),'-pdf');
+    end
+
+    %% -----------------------Average Outflows---------------------------------
+    PDCavgOut = arrayfun(@(x) squeeze(mean(Data([1:x-1 x+1:end],x,:,:),1)),1:size(Data,1),'uni',false);
+    if false
+        Fig2 = figure;
+        line([-100 300],[0 0],'linestyle','--','color','k','linewidth',1.3);
+        hold on;
+        for i = 1:numel(PDCavgOut)
+            SP(i) = plot(tsec,sum(PDCavgOut{i},1),'color',Colors(i,:),'linewidth',2);
+        end
+        xlim([-100 300])
+        xlabel('Time (ms)')
+        vline([0],'k--')
+        legend(SP,arrayfun(@(x) ['L' num2str(x)],1:6,'uni',false));
+        set(gca,'fontsize',16);
+        set(gcf,'unit','inch','position',[2 5 15 5],'color','w');
+        title ('Average Outflow of layers')
+        export_fig(Fig2,fullfile(opt.figpath,['STOKPDC_AveragewOutflow' opt.Normalize]),'-pdf');
+    end
+        %% -------------------------------Movie----------------------------------
+    if true
+        v = VideoWriter(fullfile(opt.figpath,['STOKPDC_MovieNet.avi']));
+        v.FrameRate = 10;
+        open(v);
+        
+        Nodesize = smoothdata(squeeze(mean(cat(3,PDCavgOut{:}),1))*80000);
+        Stren = smoothdata(squeeze(mean(Data(:,:,:,:),3)),3,'movmean',10);
+        Stren = Stren./max(Stren(:));
+        
+        FigM = figure;
+        set(FigM,'unit','inch','position',[1 2 7 9],'color','w');
+        Pos = [1.5 6;2.5 5; 2 4;1.5 2.; 2.5 1.5;2.1 .5];
+         hold on;
+        for T = 126:numel(tsec)
+
+            for i = 1:6
+                for j = 1:6
+                    if i~=j
+                        
+                        if Stren(i,j,T)>0.25
+                            if i>j
+                                off = .1;
+                            else
+                                off = -.1;
+                            end
+                            if j==6
+                                Li(i,j) = line([Pos(j,1)-.03 Pos(i,1)-.03],[Pos(j,2) Pos(i,2)]+off,'linewidth',Stren(i,j,T)*20,'color',[Colors(j,:) ]);
+                            elseif i==6 && j==3
+                                Li(i,j) = line([Pos(j,1)+.03 Pos(i,1)+.03],[Pos(j,2) Pos(i,2)]+off,'linewidth',Stren(i,j,T)*20,'color',[Colors(j,:) ]);
+                            else
+                                Li(i,j) = line([Pos(j,1) Pos(i,1)],[Pos(j,2) Pos(i,2)]+off,'linewidth',Stren(i,j,T)*20,'color',[Colors(j,:) ]);
+                            end
+                        end
+                        %hold on;
+                    end
+                end
+            end
+            UP = sum(sum(triu(squeeze(mean(Data(:,:,:,T),3)))));
+            Down = sum(sum(tril(squeeze(mean(Data(:,:,:,T),3)))));
+            %A(1) = annotation('arrow',[.95 .95],[.2 .8],'linewidth',UP*20,'color','r') ;        
+            %A(2) = annotation('arrow',[.05 .05],[.8 .2],'linewidth',Down*20,'color','b') ;
+
+            N = scatter(Pos(:,1), Pos(:,2), Nodesize(T,:), Colors,'filled'); % nodes
+            for l = 1:6, NT(l) = text(Pos(l,1)-.02,Pos(l,2),LNames{l},'Fontsize',14);end % node texts
+
+            TT = text(1.8,6.5,['Time = ' num2str(tsec(T)) '(ms)'],'fontsize',14);
+
+            xlim([1.2 2.8]);
+            ylim([0 7])
+            axis off;
+            F(T-125) = getframe(FigM);
+            pause(.01);
+            delete(TT);
+            delete(Li);
+            delete(NT);
+            delete(N);
+            %delete(A)
+        end
+        
+        %Mov = Movie(F,40);
+        
+        writeVideo(v,F);
+        close(v);
+        close all;
+    end
+    %% ---------------------------Directionality-----------------------------
+    Diff = arrayfun(@(x) squeeze(mean(Data(1:x-1,x,:,:),1) - mean(Data(x+1:end,x,:,:),1))./squeeze(mean(cat(1,mean(Data(1:x-1,x,:,:),1),mean(Data(x+1:end,x,:,:),1)),1)),1:6,'uni',false);%./squeeze(mean(Data(x,x:end,:,:),2) + mean(Data(x,1:x,:,:),2)),1:size(Data,1),'uni',false);
+    %Diff = arrayfun(@(x) squeeze(mean(Data(1:x,x,:,:),1) - mean(Data(x:end,x,:,:),1)),1:size(Data,1),'uni',false);
+   if false
+        Fig2 = figure;
+        line([-100 300],[0 0],'linestyle','--','color','k','linewidth',1.3);
+        hold on;
+        for i = 2:numel(PDCavgOut)-1
+            SP(i-1) = plot(tsec,sum(Diff{i},1),'color',Colors(i,:),'linewidth',2);
+        end
+        xlim([-100 300])
+        xlabel('Time (ms)')
+        vline([0],'k--')
+        legend(SP,arrayfun(@(x) ['L' num2str(x)],2:5,'uni',false));
+        set(gca,'fontsize',16);
+        set(gcf,'unit','inch','position',[2 5 15 5],'color','w');
+        title ('Upward flow of layers')
+        export_fig(Fig2,fullfile(opt.figpath,['STOKPDC_Upwardflow' opt.Normalize '_Norm']),'-pdf');
+   end
+    
+ %% =================================------Second part: Statistics-----===============================  
+ 
+ 
+ 
  %%    Next step is to test the significance of up/down directionalities: Using permutation test 
     
         LNum = size(Data,1);

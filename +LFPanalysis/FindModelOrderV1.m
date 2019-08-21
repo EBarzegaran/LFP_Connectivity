@@ -12,16 +12,19 @@ function [ModOrds] = FindModelOrderV1(Projfolder,varargin)
         'figpath'  ,fullfile(fileparts(fileparts(Projfolder)),'Results') ...
         );
 
-    animals = dir(fullfile(Projfolder,'*Layers.mat')); % files in the project folder
+    %animals = dir(fullfile(Projfolder,'*Layers.mat')); % files in the project folder
+    animals = dir(fullfile(Projfolder,'mID*Layers.mat')); % files in the project folder
     animals = {animals.name};
     animID = cellfun(@(x) x(1:6),animals,'uni',false); % animal IDs
     
+    if ~exist(opt.figpath)
+        mkdir(opt.figpath);
+    end
+    
 %% Compute model order for each animal
-    xticklabels = -500:100:500;
-    xticks = linspace (0,1250,numel(xticklabels));
     disp('Estimating optimal model orders:');
     
-    if ~exist(fullfile(Projfolder,['ModelOrders_Cnd' num2str(opt.Cnd)]),'file') || opt.recalc
+    if ~exist(fullfile(Projfolder,['ModelOrders_Cnd' num2str(opt.Cnd) '.mat'] ),'file') || opt.recalc
         for subj = 1:numel(animals)
             disp(animID{subj});
             LFP = load(fullfile(Projfolder,animals{subj}),'lfpMouse');
@@ -33,12 +36,14 @@ function [ModOrds] = FindModelOrderV1(Projfolder,varargin)
             % QUESTION: which part of data should be used? i.e. which time window
             Cond = opt.Cnd;
             epochs = permute(LFP.lfpMouse(:,:,:,Cond), [3,2,1]); %trials, nodes, time
-            [aic,bic,moaic,mobic] = tsdata_to_infocrit(permute(epochs(:,:,250:1001),[2 1 3]),opt.maxorder,'LWR',false); % stationary
-            ff  = 0.98;
+            %save(fullfile(Projfolder,'temp1.mat'),'epochs')
+%             [aic,bic,moaic,mobic] = tsdata_to_infocrit(permute(epochs(:,:,250:1001),[2 1 3]),opt.maxorder,'LWR',false); % stationary
+            [aic,bic,moaic,mobic] = tsdata_to_infocrit(permute(epochs(:,:,1:625),[2 1 3]),opt.maxorder,'LWR',false); % stationary, on prestimulus data
+            ff  = 0.99;
             for p = 1:opt.maxorder
                 if mod(p,3)==0, disp([num2str(round(p/opt.maxorder*100)) ' %']);end
-                REV1(p) = LSK_REV1(epochs(:,:,250:1001), p, ff);    % Y-Y'
-                REV2(p) = LSK_REV2(epochs(:,:,250:1001), p, ff);    % using model residuals
+                REV1(p) = LSK_REV1(epochs(:,:,:), p, ff);    % Y-Y'
+                REV2(p) = LSK_REV2(epochs(:,:,:), p, ff);    % using model residuals
             end
             ModOrds.(animID{subj}).REV1 = REV1;
             ModOrds.(animID{subj}).REV2 = REV2;
@@ -75,8 +80,8 @@ function [ModOrds] = FindModelOrderV1(Projfolder,varargin)
            [~,I2] = min(Normalize(ModOrds.(animID{subj}).bic));
             vline2([I1 I2],{'--g','--k'});
             
-           [~,I1] = max(Normalize(1-ModOrds.(animID{subj}).REV1));
-           [~,I2] = max(Normalize(1-ModOrds.(animID{subj}).REV2));
+           [~,I1] = max((1-ModOrds.(animID{subj}).REV1));
+           [~,I2] = max((1-ModOrds.(animID{subj}).REV2));
             vline2([I1 I2],{'--r','--b'});
             
             title([strrep(animID{subj},'_','-') ' - Cond #' num2str(opt.Cnd)]);
