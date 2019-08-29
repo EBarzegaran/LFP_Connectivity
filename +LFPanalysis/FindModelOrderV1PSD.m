@@ -79,7 +79,7 @@ function ModOrds = FindModelOrderV1PSD(Projfolder,varargin)
                 PSD_p{p} = (1/srate*NCov)./abs(repmat(eye(size(A,1)),1,1,size(A,3),size(A,4))+A).^2;
                 
             end
-            PSD_param{subj} = PSD_p{15}(:,:,20:end,200:1000);
+            PSD_param{subj} = PSD_p{10}(:,:,20:end,200:1000);
             
             
             %-------------------------Estimate the MSE of PSDs------------------
@@ -108,6 +108,7 @@ function ModOrds = FindModelOrderV1PSD(Projfolder,varargin)
         save(fullfile(Projfolder,'PSD_param_nonpram.mat'),'PSD_nonparam','PSD_param','tsec1','freqs1');
     else
         load(fullfile(Projfolder,['ModelOrders_Cnd' num2str(opt.Cnd) '_PSD.mat']));
+        load(fullfile(Projfolder,'PSD_param_nonpram.mat'));
     end
     %% Plot the results
     FIG2 = figure;
@@ -119,5 +120,34 @@ function ModOrds = FindModelOrderV1PSD(Projfolder,varargin)
         title([strrep(animID{subj},'_','-') ' - Order = ' num2str(I)]);
     end 
     set(FIG2,'unit','inch','position',[0 0 20 15],'color','w');
-    export_fig(FIG2,fullfile(opt.figpath,['ModelOrders_' num2str(opt.Cnd) '_PSD']),'-pdf');
+    export_fig(FIG2,fullfile(opt.figpath,['ModelOrders_' '_PSD']),'-pdf');
+    
+    %% plot PSDs
+    
+    
+    PSD_paramM = mean(cat(5,PSD_param{1:6}),5);
+    PSD_nonparamM = mean(cat(5,PSD_nonparam{1:6}),5);
+    labels = arrayfun(@(x) ['L' num2str(x)],1:6,'uni',false);
+    %
+    FIG3 = figure;
+    for c = 1:size(PSD_paramM,1)
+        subplot(6,2,c*2-1)
+        imagesc(abs(squeeze(PSD_nonparamM(c,c,:,:))));
+        set(gca,'xtick',2:100:800,'xticklabel',round(tsec1(2:100:800)))
+        vline(427,'w--')
+        axis xy;
+        title(labels{c})
+        
+        subplot(6,2,c*2)
+        imagesc(abs(squeeze(PSD_paramM(c,c,:,:))));
+        set(gca,'xtick',2:100:800,'xticklabel',round(tsec1(2:100:800)))
+        vline(427,'w--')
+        axis xy;
+        title(labels{c})
+        
+    end
+    
+    set(FIG3,'unit','inch','position',[2 2 10 16],'color','w')
+    export_fig(FIG3,fullfile(opt.figpath,['PSD_ModelOrders10_' '_PSD']),'-pdf');
+    
 end
