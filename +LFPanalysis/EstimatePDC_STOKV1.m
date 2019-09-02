@@ -28,12 +28,12 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
     end
     
     opt.Freqband = round(opt.Freqband); % Round the frequency band for now
-    
+    SaveFileName = ['PDCSTOK_Cnd' num2str(opt.Cnd) '_MORD' num2str(opt.ModOrds)];
 %% Estimate MVAR parameters using STOK algorithm
     xticklabels = -500:100:500;
     xticks = linspace (0,1250,numel(xticklabels));
     
-    if ~exist(fullfile(Projfolder,['PDCSTOK_Cnd' num2str(opt.Cnd) '_MORD' num2str(opt.ModOrds) '.mat']),'file') || opt.recalc
+    if ~exist(fullfile(Projfolder,[SaveFileName '.mat']),'file') || opt.recalc
         for subj = 1:numel(animals)
             
             %---------------------- Load required Data --------------------
@@ -64,9 +64,9 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
             PDC.(animID{subj}) = dynet_ar2pdc(KF,srate,fvec,measure,keepdiag,flow);
         end
 
-        save(fullfile(Projfolder,['PDCSTOK_Cnd' num2str(opt.Cnd) '_MORD', num2str(opt.ModOrds)]),'PDC', 'fvec','tsec','labels');
+        save(fullfile(Projfolder,SaveFileName),'PDC', 'fvec','tsec','labels');
     else
-        load(fullfile(Projfolder,['PDCSTOK_Cnd' num2str(opt.Cnd) '_MORD', num2str(opt.ModOrds)]));
+        load(fullfile(Projfolder,SaveFileName));
     end
     %% Normalize PDC values using prestim PDCs
     if opt.NormPrestim
@@ -76,6 +76,10 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
             PDC.(animID{subj}) = PDC.(animID{subj})-mean(PDC.(animID{subj})(:,:,:,IndNorm),4);
             
          end
+         
+         SaveFigName = [SaveFileName '_NormPrestim'];
+    else
+        SaveFigName = SaveFileName;
     end
     %% Plot the results: individuals and average layer connectivities
     
@@ -103,9 +107,9 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
             % Databs = repmat(std(Data(:,:,:,100:376),[],4),[1 1 1 size(Data,4)]);
             Datap = Data; %(Data-Databm)./Databs;
             %plot individual animal resaults
-            FIG = dynet_connplot(Datap,tsec2,fvec(opt.Freqband(1):opt.Freqband(2)),labels, [-1 1], [], [],0);
-            set(FIG,'unit','inch','position',[0 0 35 20],'color','w')
-            export_fig(FIG,fullfile(opt.figpath,['STOKPDC_' animID{subj} 'NormPrestim''_modelOrd_' num2str(opt.ModOrds)]),'-pdf');
+%             FIG = dynet_connplot(Datap,tsec2,fvec(opt.Freqband(1):opt.Freqband(2)),labels, [-1 1], [], [],0);
+%             set(FIG,'unit','inch','position',[0 0 35 20],'color','w')
+%             export_fig(FIG,fullfile(opt.figpath,[SaveFigName '_' animID{subj} ]),'-pdf');
             close all;
             
             DataM(:,:,:,:,subj) = Data;%(Data-Databm)./Databs;
@@ -116,7 +120,7 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
         FIG = dynet_connplot((Data./max(Data(:))),linspace(-100,opt.TimeWin(2),size(PDC.mID_40,4)),fvec(opt.Freqband(1):opt.Freqband(2)),labels, [-1 1], [], [],0);
         set(FIG,'unit','inch','position',[0 0 35 20],'color','w')
         colormap(jmaColors('coolhotcortex'));
-        export_fig(FIG,fullfile(opt.figpath,['STOKPDC_AverageAll_normalize_' 'NormPrestim' '_MORD', num2str(opt.ModOrds)]),'-pdf');
+        export_fig(FIG,fullfile(opt.figpath,[SaveFigName '_AverageAll']),'-pdf');
         
         % generate a movie for average FC? (Maybe gamma [50 100])
         
@@ -141,7 +145,7 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
     load('LayerColors.mat');
     LNames = arrayfun(@(x) ['L' num2str(x)],1:6,'uni',false);
     %-----------------------Nodes outflows-----------------------------------
-    if false
+    if true
         Fig1 = figure;
         for i = 1:size(Data,1)
             subplot(size(Data,1),1,i);
@@ -157,12 +161,12 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
         legend(SP,LNames);
         xlabel('Time (ms)');
         set(Fig1,'unit','inch','position',[2 0 20 20],'color','w')
-        export_fig(Fig1,fullfile(opt.figpath,['STOKPDC_NodesOutflow' opt.Normalize '_NormPrestim']),'-pdf');
+        export_fig(Fig1,fullfile(opt.figpath,[SaveFigName '_LayersOutflow']),'-pdf');
     end
 
     %% -----------------------Average Outflows---------------------------------
     PDCavgOut = arrayfun(@(x) squeeze(mean(Data([1:x-1 x+1:end],x,:,:),1)),1:size(Data,1),'uni',false);
-    if false
+    if true
         Fig2 = figure;
         line([-100 300],[0 0],'linestyle','--','color','k','linewidth',1.3);
         hold on;
@@ -176,11 +180,11 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
         set(gca,'fontsize',16);
         set(gcf,'unit','inch','position',[2 5 15 5],'color','w');
         title ('Average Outflow of layers')
-        export_fig(Fig2,fullfile(opt.figpath,['STOKPDC_AveragewOutflow' opt.Normalize '_NormPrestim']),'-pdf');
+        export_fig(Fig2,fullfile(opt.figpath,[SaveFigName '_AveragewOutflow']),'-pdf');
     end
         %% -------------------------------Movie----------------------------------
     if false
-        v = VideoWriter(fullfile(opt.figpath,['STOKPDC_MovieNet.avi']));
+        v = VideoWriter(fullfile(opt.figpath,[SaveFigName '_MovieNet.avi']));
         v.FrameRate = 10;
         open(v);
         
@@ -266,7 +270,7 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
         set(gca,'fontsize',16);
         set(gcf,'unit','inch','position',[2 5 15 5],'color','w');
         title ('Upward flow of layers')
-        %export_fig(Fig2,fullfile(opt.figpath,['STOKPDC_Upwardflow' opt.Normalize '_Norm'  '_NormPrestim']),'-pdf');
+        export_fig(Fig2,fullfile(opt.figpath,[SaveFigName '_Upwardflow_Norm_AveragedFreqs']),'-pdf');
         
         %--------------------------All Frequencies-------------------------
         ind = (tsec>=-100);
@@ -294,9 +298,9 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
         colormap(jmaColors('coolhotcortex'))
         set(Fig22,'unit','inch','position',[1 1 10 15],'color','w')
         
-        %export_fig(Fig22,fullfile(opt.figpath,['STOKPDC_Upwardflow' opt.Normalize '_Norm_allfreqs'  '_NormPrestim']),'-pdf');
+        export_fig(Fig22,fullfile(opt.figpath,[SaveFigName '_Upwardflow_Norm_AllFreqs']),'-pdf');
         
-        %--------------------average over all Layer--s---------------------
+        %--------------------average over all Layers-----------------------
         DiffM = mean(cat(3,Diff{2:5}),3);
         Fig3 = figure;
         imagesc(DiffM(:,ind));
@@ -311,7 +315,7 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
         set(gca,'fontsize',FS);
         colormap(jmaColors('coolhotcortex'))
         set(Fig3,'unit','inch','position',[1 1 10 4],'color','w');
-        %export_fig(Fig3,fullfile(opt.figpath,['STOKPDC_Upwardflow' opt.Normalize '_Norm_AveragedLayers'  '_NormPrestim']),'-pdf');
+        export_fig(Fig3,fullfile(opt.figpath,[SaveFigName '_Upwardflow_Norm_AveragedLayers']),'-pdf');
         
         %close all
    end
@@ -325,7 +329,7 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
         LNum = size(Data,1);
         Perms = perms(1:LNum);% Generate all possible permutations
         Nperm = 2000;%size(Perms,1);
-        PermFileName = fullfile(Projfolder,['PDCSTOK_Cnd' num2str(opt.Cnd) '_PermuteState_' opt.typePermute '.mat']);
+        PermFileName = fullfile(Projfolder,[[SaveFigName '_Upwardflow_Norm_AveragedLayers'] '_PermuteState_' opt.typePermute '.mat']);
         if ~exist(PermFileName,'file') || opt.doPermute
             for p = 1:Nperm % for each permutation:
                 if mod(p,20)==0, disp(p); end
@@ -377,7 +381,7 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
             end
             save(PermFileName,'UpwardN','PvalsU','PvalsD','opt');
         else
-            load(PermFileName,'UpwardN','PvalsU','PvalsD');
+            load(PermFileName,'UpwardN','PvalsU','PvalsD','opt');
         end 
         
         % extract cluster statistics
