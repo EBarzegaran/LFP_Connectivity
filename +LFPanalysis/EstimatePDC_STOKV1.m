@@ -1,4 +1,4 @@
-function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
+function [PDC, Diff,fvec,tsec] = EstimatePDC_STOKV1(Projfolder,varargin)
 
 %% set default values
     opt = ParseArgs(varargin, ...
@@ -53,7 +53,7 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
             measure='sPDC';
             %measure='PDCnn';
             flow = 2; % 1 col, 2 row-wise normalization
-            fvec=1:150;
+            fvec=round(opt.Freqband(1)):round(opt.Freqband(2));
             load(fullfile(Projfolder,animals{subj}),'srate');
             tvec = (tsec>=opt.TimeWin(1)) & (tsec<=opt.TimeWin(2));
             tsec = tsec(tvec);
@@ -117,7 +117,7 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
         
         % plot average over all animals
         Data = mean(DataM(:,:,:,:,1:6),5);
-        FIG = dynet_connplot((Data./max(Data(:))),linspace(-100,opt.TimeWin(2),size(PDC.mID_40,4)),fvec(opt.Freqband(1):opt.Freqband(2)),labels, [-1 1], [], [],0);
+        FIG = dynet_connplot((Data./max(Data(:))),linspace(-100,opt.TimeWin(2),size(PDC.mID_40,4)),fvec,labels, [-1 1], [], [],0);
         set(FIG,'unit','inch','position',[0 0 35 20],'color','w')
         colormap(jmaColors('coolhotcortex'));
         export_fig(FIG,fullfile(opt.figpath,[SaveFigName '_AverageAll']),'-pdf');
@@ -145,7 +145,7 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
     load('LayerColors.mat');
     LNames = arrayfun(@(x) ['L' num2str(x)],1:6,'uni',false);
     %-----------------------Nodes outflows-----------------------------------
-    if true
+    if false
         Fig1 = figure;
         for i = 1:size(Data,1)
             subplot(size(Data,1),1,i);
@@ -166,7 +166,7 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
 
     %% -----------------------Average Outflows---------------------------------
     PDCavgOut = arrayfun(@(x) squeeze(mean(Data([1:x-1 x+1:end],x,:,:),1)),1:size(Data,1),'uni',false);
-    if true
+    if false
         Fig2 = figure;
         line([-100 300],[0 0],'linestyle','--','color','k','linewidth',1.3);
         hold on;
@@ -255,7 +255,7 @@ function [PDC, fvec] = EstimatePDC_STOKV1(Projfolder,varargin)
     Diff = cellfun(@(x) mean(x,3),Diff,'uni',false);
     %Diff = arrayfun(@(x) squeeze(mean(Data(1:x-1,x,:,:),1) - mean(Data(x+1:end,x,:,:),1))./squeeze(mean(cat(1,mean(Data(1:x-1,x,:,:),1),mean(Data(x+1:end,x,:,:),1)),1)),1:6,'uni',false);%./squeeze(mean(Data(x,x:end,:,:),2) + mean(Data(x,1:x,:,:),2)),1:size(Data,1),'uni',false);
     %Diff = arrayfun(@(x) squeeze(mean(Data(1:x,x,:,:),1) - mean(Data(x:end,x,:,:),1)),1:size(Data,1),'uni',false);
-   if true
+   if false
        %-------------------------Averaged Over Frequencies-----------------
         Fig2 = figure;
         line([-100 300],[0 0],'linestyle','--','color','k','linewidth',1.3);

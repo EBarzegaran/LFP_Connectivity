@@ -67,7 +67,7 @@ function [ModOrds] = FindModelOrderS1(Projfolder,varargin)
                 PSD_p{p} = (1/srate*NCov)./abs(repmat(eye(size(A,1)),1,1,size(A,3),size(A,4))+A).^2;
                 
             end
-            PSD_param{subj} = PSD_p{40}(:,:,20:end,:);
+            PSD_param{subj} = PSD_p{50}(:,:,20:end,:);
             
             
             %-------------------------Estimate the MSE of PSDs------------------
