@@ -64,8 +64,11 @@ for x = 1:numel(animals)
     % ------------------------- bipolar rerefrencing ----------------------
     
     % WHY NO BIPOLAR REFERENCING HERE?
-    % bepoch = CalcBipolar(permute(epochs,[2 3 1])); % calculate bipolar referenced data
-    lfpRat = permute(epochs,[3 2 1]);
+%      bepoch(1:6,:,:) = CalcCSD(permute(epochs(:,1:6,:),[2 3 1])); % calculate bipolar referenced data
+%      bepoch(7:12,:,:) = CalcCSD(permute(epochs(:,7:12,:),[2 3 1])); % calculate bipolar referenced data
+%     bepochs(:,1:6,:)  = epochs(:,1:6,:) - mean(epochs(:,1:6,:),2);
+%     bepochs(:,7:12,:)  = epochs(:,7:12,:) - mean(epochs(:,7:12,:),2);
+%     lfpRat = permute(epochs,[3 2 1]);
     tsec = (-pdc_stf:(size(epochs,3)-pdc_stf-1)) * (1000/srate);
 
     save(fullfile(savePath,[animals{x}(1:4) '_LFPs_' Chans]),'lfpRat','srate','nTrials','nchan','tsec');
