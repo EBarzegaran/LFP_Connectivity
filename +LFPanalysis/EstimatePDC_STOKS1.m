@@ -49,10 +49,12 @@ function [PDC, fvec] = EstimatePDC_STOKS1(Projfolder,varargin)
             tvec = (tsec>=opt.TimeWin(1)) & (tsec<=opt.TimeWin(2));
             tsec = tsec(tvec);
             labels = arrayfun(@(x) ['L' num2str(x)],1:6,'uni',false);
-            % (3) estimate MVAR coeffs using stok
-            KF = dynet_SSM_STOK(epochs(:,:,tvec),opt.ModOrds,ff);  
-            % (4) estimate PDC based on MVAR coeffs
-            PDC.(animID{subj}) = dynet_ar2pdc(KF,srate,fvec,measure,keepdiag,flow);
+            for roi = 1:2
+                % (3) estimate MVAR coeffs using stok
+                KF = dynet_SSM_STOK(epochs((1:6)+(roi-1)*6,(1:6)+(roi-1)*6,tvec),opt.ModOrds,ff);  
+                % (4) estimate PDC based on MVAR coeffs
+                PDC.(animID{subj})((1:6)+(roi-1)*6,(1:6)+(roi-1)*6,:,:) = dynet_ar2pdc(KF,srate,fvec,measure,keepdiag,flow);
+            end
         end
 
         save(fullfile(Projfolder,SaveFileName),'PDC', 'fvec','tsec','labels');
@@ -266,7 +268,7 @@ function [PDC, fvec] = EstimatePDC_STOKS1(Projfolder,varargin)
             axis xy;
             xtickso = find(ismember(tseccorr,-100:100:300));
             set(gca,'xtick',xtickso,'xticklabel',tseccorr(xtickso),'ytick',1:40:numel(fvec),'yticklabel',fvec(1:40:end));
-            caxis([-.1 .1]);
+            caxis([-.07 .07]);
             vline(xtickso(2),'k--');
             colorbar;
             xlabel('Time(msec)');
