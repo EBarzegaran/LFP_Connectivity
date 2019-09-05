@@ -24,6 +24,7 @@ function [PDC, fvec] = EstimatePDC_STOKS1(Projfolder,varargin)
     
     opt.Freqband = round(opt.Freqband); % Round the frequency band for now
     SaveFileName = ['PDCSTOK_MORD' num2str(opt.ModOrds)];
+    ROIs = {'cS1','iS1'};
 %% Estimate MVAR parameters using STOK algorithm
     xticklabels = -100:100:100;
     xticks = linspace (0,1250,numel(xticklabels));
@@ -39,6 +40,9 @@ function [PDC, fvec] = EstimatePDC_STOKS1(Projfolder,varargin)
             %--------------- Estimate MVAR params and PDC -----------------
             % (1) Prepare the data
             epochs = permute(LFP.lfpRat(:,:,:), [3,2,1]); %trials, nodes, time
+       
+            %Epochs = cat(1,epochs{:});
+
             % (2) prepare the parameters
             ff=.99;
             keepdiag = 1; % 
@@ -49,14 +53,28 @@ function [PDC, fvec] = EstimatePDC_STOKS1(Projfolder,varargin)
             tvec = (tsec>=opt.TimeWin(1)) & (tsec<=opt.TimeWin(2));
             tsec = tsec(tvec);
             labels = arrayfun(@(x) ['L' num2str(x)],1:6,'uni',false);
-            for roi = 1:2
-                % (3) estimate MVAR coeffs using stok
-                KF = dynet_SSM_STOK(epochs((1:6)+(roi-1)*6,(1:6)+(roi-1)*6,tvec),opt.ModOrds,ff);  
-                % (4) estimate PDC based on MVAR coeffs
-                PDC.(animID{subj})((1:6)+(roi-1)*6,(1:6)+(roi-1)*6,:,:) = dynet_ar2pdc(KF,srate,fvec,measure,keepdiag,flow);
-            end
+            
+            [PDC.(animID{subj}),C(:,subj)] = bootstrap_PDC(epochs(:,:,tvec),100,opt.ModOrds,ff,srate,fvec,measure,keepdiag,flow);
         end
+        %----------------------------Plot C--------------------------------
+        Fig = figure;
+        for roi = 1:1
+            subplot(2,1,1),plot(tsec,squeeze(C(:,:)),'linewidth',1.5);
+            xlim([-50,100]);
+            vline(0,'r--');
+            title(['Individual Cs - ' ROIs{roi}]);
+            legend(animID)
 
+            subplot(2,1,2),plot(tsec,squeeze(mean(C(:,:),2)),'linewidth',1.5,'color','k');
+            xlim([-50,100]);
+            vline(0,'r--');
+            xlabel('time(ms)')
+            title('Averaged C')
+        end
+        set(Fig,'unit','inch','position',[4 4 30 8],'color','w')
+        export_fig(Fig,'temp_c','-pdf'); close
+        %------------------------------------------------------------------
+        
         save(fullfile(Projfolder,SaveFileName),'PDC', 'fvec','tsec','labels');
     else
         load(fullfile(Projfolder,SaveFileName));
@@ -77,7 +95,7 @@ function [PDC, fvec] = EstimatePDC_STOKS1(Projfolder,varargin)
     end
 
     %% Plot the results: individuals and average layer connectivities
-    ROIs = {'cS1','iS1'};
+    
     
     if opt.plotfig
         if ~exist(opt.figpath,'dir')
@@ -123,13 +141,13 @@ function [PDC, fvec] = EstimatePDC_STOKS1(Projfolder,varargin)
         end
         TimeInd = (tsec>=-50);
         Data = (mean(DataM(1:6,1:6,:,TimeInd,:),5));
-        FIG = dynet_connplot(Data./max(Data(:)),tsec(TimeInd),fvec,labels, ranges, [], [],0);
+        FIG = dynet_connplot(Data./max(Data(:)),    tsec(TimeInd),  fvec,   labels, ranges, [], [],0);
         if opt.NormPrestim, colormap(jmaColors('coolhotcortex'));end
         set(FIG,'unit','inch','position',[0 0 35 20],'color','w')
         export_fig(FIG,fullfile(opt.figpath,[SaveFigName '_ AverageAll_' ROIs{1}]),'-pdf');
         
         Data = mean(DataM(7:12,7:12,:,TimeInd,:),5);
-        FIG = dynet_connplot(Data./max(Data(:)),tsec(TimeInd),fvec,labels, ranges, [], [],0);
+        FIG = dynet_connplot(Data./max(Data(:)),    tsec(TimeInd), fvec,    labels, ranges, [], [],0);
         if opt.NormPrestim, colormap(jmaColors('coolhotcortex'));end
         set(FIG,'unit','inch','position',[0 0 35 20],'color','w')
         export_fig(FIG,fullfile(opt.figpath,[SaveFigName '_ AverageAll_' ROIs{2}]),'-pdf');
@@ -246,7 +264,7 @@ function [PDC, fvec] = EstimatePDC_STOKS1(Projfolder,varargin)
                 set(gca,'xtick',xtickso,'xticklabel',tseccorr(xtickso),'ytick',1:40:numel(fvec),'yticklabel',fvec(1:40:end));
                 M = max(abs(Diff{i}(:)));
                 %caxis([-M M]);
-                caxis([-.2 .2]);
+                caxis([-.35 .35]);
                 vline(xtickso(2),'k--');
                 colorbar;
                 if i==5
@@ -268,7 +286,7 @@ function [PDC, fvec] = EstimatePDC_STOKS1(Projfolder,varargin)
             axis xy;
             xtickso = find(ismember(tseccorr,-100:100:300));
             set(gca,'xtick',xtickso,'xticklabel',tseccorr(xtickso),'ytick',1:40:numel(fvec),'yticklabel',fvec(1:40:end));
-            caxis([-.07 .07]);
+            caxis([-.2 .2]);
             vline(xtickso(2),'k--');
             colorbar;
             xlabel('Time(msec)');
