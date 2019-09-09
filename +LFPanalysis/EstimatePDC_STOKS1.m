@@ -40,21 +40,21 @@ function [PDC, fvec] = EstimatePDC_STOKS1(Projfolder,varargin)
             %--------------- Estimate MVAR params and PDC -----------------
             % (1) Prepare the data
             epochs = permute(LFP.lfpRat(:,:,:), [3,2,1]); %trials, nodes, time
-       
-            %Epochs = cat(1,epochs{:});
+        %end
+        %Epochs = cat(1,epochs{:});
 
-            % (2) prepare the parameters
-            ff=.99;
-            keepdiag = 1; % 
-            measure='PDCnn';
-            flow = 2; % 1 col, 2 row-wise normalization
-            fvec=opt.Freqband(1):opt.Freqband(2);
-            load(fullfile(Projfolder,animals{subj}),'srate');
-            tvec = (tsec>=opt.TimeWin(1)) & (tsec<=opt.TimeWin(2));
-            tsec = tsec(tvec);
-            labels = arrayfun(@(x) ['L' num2str(x)],1:6,'uni',false);
-            
-            [PDC.(animID{subj}),C(:,subj)] = bootstrap_PDC(epochs(:,:,tvec),100,opt.ModOrds,ff,srate,fvec,measure,keepdiag,flow);
+        % (2) prepare the parameters
+        ff=.99;
+        keepdiag = 1; % 
+        measure='PDCnn';
+        flow = 2; % 1 col, 2 row-wise normalization
+        fvec=opt.Freqband(1):opt.Freqband(2);
+        load(fullfile(Projfolder,animals{subj}),'srate');
+        tvec = (tsec>=opt.TimeWin(1)) & (tsec<=opt.TimeWin(2));
+        tsec = tsec(tvec);
+        labels = arrayfun(@(x) ['L' num2str(x)],1:6,'uni',false);
+
+        [PDC.(animID{subj}),C(:,subj)] = bootstrap_PDC(Epochs(:,:,tvec),1,[],opt.ModOrds,ff,srate,fvec,measure,keepdiag,flow);
         end
         %----------------------------Plot C--------------------------------
         Fig = figure;
