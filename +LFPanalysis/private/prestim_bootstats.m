@@ -13,7 +13,6 @@ opt = ParseArgs(varargin, ...
 if ~exist('suprath','var') || isempty(suprath)
     suprath = .01;
 end
-tic
 
 
 %% Estimate 95% confidence intervals and robust estimator of median

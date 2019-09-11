@@ -1,18 +1,33 @@
 function  [PDC, Direction_Stats]  =   bootstrap_PDC  (epochs,  srate,  fvec,   tsec,  varargin)
 
-% This function calculates PDC based on STOK algorithm and using
-% bootstrapping it estimnate the significant results.
-
-% INPUTS:
-    %   epochs: cell array, each of them containing a trial x channel x  time matrixs
-    %   nboot: number of bootstraps
-    %   ModOrds: model order of STOK
-    %   ... Needs to be completed
-
-% OUTPUT:
-
-    
-%     
+% This function calculates PDC based on STOK algorithm, and using
+% bootstrapping it estimnates the significant results.
+% ********** Later I might add cluster-based permutation test to this analysis
+% -------------------------------------------------------------------------
+% INPUTS
+% - epochs:     A cell array (size = number of subjects) of matrices, containing trial x channel x  time matrix
+% - srate:      Sampling rate
+% - fvec:       A vector containing the frequency indices of interest
+% - tsec:       A vector containing the time points - stimulus locked
+%
+% - <OPTIONS>
+% - 'nboot':        number of bootstraps
+% - 'bootsize':     size of bootstrap draws
+% - 'ModOrds':      model order of STOK
+% - 'ff':           Variance to keep in STOK
+% - 'measure':      options: 'PDCnn' , 'PDC', 'sPDC', for more info see function: dynet_ar2pdc 
+% - 'keepdiag':     keep the diags or not
+% - 'flow':         Normalization: 1 for column-, or 2 for row-wise
+% -------------------------------------------------------------------------
+% OUTPUT
+% - PDC:            PDC values: channel x  channel x freq x time x subj
+% - Direction_Stats: a structure array with the following fields, calculated based on bootstrapping of directionalities: 
+%                    LName: Layer name
+%                    Median: Median of the bootstrap of directionalites
+%                    CI:     confidence interval of the bootstraps
+%                    PostStim:  stats calculated by comparing pre and post bootstrap distributions
+%--------------------------------------------------------------------------
+% Author: Elham Barzegaran, 11/09/2019
 %% Default values
 
 opt = ParseArgs(varargin, ...
@@ -88,25 +103,30 @@ else
     Boots          =    randi(nsubj,opt.nboot,opt.bootsize);
 end
 
+PDCs        =   size(PDC);
+PDC_Mboot   =   zeros(PDCs(1:4));
 
 for bs = 1:opt.nboot % bootstrap over subjects/animals
     if mod(bs,1)==100,     disp(['Bootsrap# ' num2str(bs)]);    end
     
-    DL_boot(:,:,:,bs) = mean(DL(:,:,:,Boots(bs,:)),4);
-    DA_boot(:,:,:,bs) = mean(DA(:,:,:,Boots(bs,:)),4);
+    DL_boot(:,:,:,bs)   =   mean(DL(:,:,:,Boots(bs,:)),4);
+    DA_boot(:,:,:,bs)   =   mean(DA(:,:,:,Boots(bs,:)),4);
+    PDC_Mboot(:,:,:,:)  =   PDC_Mboot(:,:,:,:)+mean(PDC(:,:,:,:,Boots(bs,:)),5);
 end
 
+PDC_Mboot               =   PDC_Mboot/opt.nboot;
+PDC(:,:,:,:,end+1)      =   PDC_Mboot;
 %% (5) Estimate frequency-wise pre-stimulus histogram and calculate stats based on that
 
 
 % Direction_layers ((12+2) x fvec x tsec>0):
-D_boot = cat(1,DL_boot,DA_boot);
-Layers_Names = [arrayfun(@(x) ['L' num2str(x) '_cS1'],2:5,'uni',false),...
-                arrayfun(@(x) ['L' num2str(x) '_iS1'],2:5,'uni',false),...
-                'All_cS1','All_iS1'];
+D_boot          =   cat(1,DL_boot,DA_boot);
+Layers_Names    =   [arrayfun(@(x) ['L' num2str(x) '_cS1'],2:5,'uni',false),...
+                    arrayfun(@(x) ['L' num2str(x) '_iS1'],2:5,'uni',false),...
+                    'All_cS1','All_iS1'];
 
 parfor x = 1:size(D_boot,1)
-    Direction_Stats(x) = prestim_bootstats(squeeze(D_boot(x,:,:,:)),tsec);
+    Direction_Stats(x) = prestim_bootstats(squeeze(D_boot(x,:,:,:)),tsec,.25,'side','both');
 end
 
 for x = 1:size(D_boot,1)
@@ -118,7 +138,7 @@ end
 
 % will be the sum of sstats of the connected components 
 
-%% (7) indicate significant cluster using cluster-stat random distribution
+%% (7) indicate significant clusters using cluster-stat of the random distribution
 
 % make a histogram of Cluster stats of random perumted data and compare it
 % to unpermuted data
