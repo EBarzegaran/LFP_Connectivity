@@ -28,11 +28,9 @@ function [PDC, fvec] = EstimatePDC_STOKS1_Group(Projfolder,varargin)
     ROIs         =      {'cS1','iS1'};
     
 %% Estimate MVAR and PDC parameters using STOK algorithm
-
-    xticklabels =       -100:100:100;
-    xticks      =       linspace (0,1250,numel(xticklabels));
     
     if ~exist(fullfile(Projfolder,[SaveFileName '.mat']),'file') || opt.recalc
+        disp('Reading LFP data');
         for subj = 1:numel(animals)
             
             %---------------------- Load the Data -------------------------
@@ -44,7 +42,7 @@ function [PDC, fvec] = EstimatePDC_STOKS1_Group(Projfolder,varargin)
             epochs{subj}    =       permute(LFP.lfpRat(:,:,:), [3,2,1]); %trials, nodes, time
         end
         
-        Epochs  =       cat(1,epochs{:}); % Agreggate data for PDC estimation
+        %Epochs  =       cat(1,epochs{:}); % Agreggate data for PDC estimation
 
         % ------------------------ prepare the parameters------------------
         ff      =       .99;
@@ -58,16 +56,19 @@ function [PDC, fvec] = EstimatePDC_STOKS1_Group(Projfolder,varargin)
         labels  =       arrayfun(@(x) ['L' num2str(x)],1:6,'uni',false);
         
         %----------------- Estimate MVAR params and PDC -------------------
-        [PDC,C] =       bootstrap_PDC(Epochs(:,:,tvec),srate,fvec,tsec,...
-                            'nboot',        100,...
+        epochs  =       cellfun(@(x) x(:,:,tvec),epochs,'uni',false); % select the time window 
+        [pdc,Direction_Stats] =       bootstrap_PDC(epochs,srate,fvec,tsec,...
+                            'nboot',        200,...
                             'ModOrds',      opt.ModOrds,...
                             'ff',           ff,...
                             'measure',      measure,...
                             'keepdiag',     keepdiag,...
                             'flow',         flow);
         
+        % just prepare PDC structure for the later analysis
+        PDC.(animID{S})  =       pdc(:,:,:,:,S);
         %--------------------------- Save Results -------------------------
-        save(fullfile(Projfolder,SaveFileName),'PDC', 'fvec','tsec','labels');
+        save(fullfile(Projfolder,SaveFileName),'PDC', 'fvec','tsec','labels','Direction_Stats');
     else
         load(fullfile(Projfolder,SaveFileName));
     end

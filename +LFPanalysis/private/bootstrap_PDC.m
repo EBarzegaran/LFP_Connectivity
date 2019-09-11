@@ -1,20 +1,19 @@
-function  [PDC, C]  =   bootstrap_PDC  (epochs,  srate,  fvec,   tsec,  varargin)
+function  [PDC, Direction_Stats]  =   bootstrap_PDC  (epochs,  srate,  fvec,   tsec,  varargin)
 
 % This function calculates PDC based on STOK algorithm and using
 % bootstrapping it estimnate the significant results.
 
 % INPUTS:
-    %   epochs: trial x channel x time
+    %   epochs: cell array, each of them containing a trial x channel x  time matrixs
     %   nboot: number of bootstraps
     %   ModOrds: model order of STOK
+    %   ... Needs to be completed
 
 % OUTPUT:
-    %   PDC:
-    %   C:
-    %   Direction:
+
     
 %     
-%% default values
+%% Default values
 
 opt = ParseArgs(varargin, ...
         'nboot'         ,100, ...       % number of bootstraps
@@ -26,73 +25,103 @@ opt = ParseArgs(varargin, ...
         'flow'          ,2 ...          % 1 col, 2 row-wise normalization 
         );
 
-[ntrl,nch,nt]       =    size(epochs); % get the size of data
-
-if isempty(opt.bootsize) % size of bootstrap draw
-    opt.bootsize    =   round(ntrl/3);
-end
-
-%% (1) draw the bootstraps and calculate PDCs
-
-if opt.nboot ==  1
-    Boots          =    1:ntrl;
-else
-    Boots          =    randi(ntrl,opt.nboot,opt.bootsize);
-end
-
-% Build the bootstrap distribution of PDC estimates
-for b = 1:opt.nboot
-    if mod(b,1)==0,     disp(['Bootsrap# ' num2str(b)]);    end
-    
-    %  estimate MVAR coeffs using stok
-    KF             =    dynet_SSM_STOK(epochs(Boots(b,:),:,:),opt.ModOrds,opt.ff);  
-    
-    %  estimate PDC based on MVAR coeffs
-    CB(:,b)        =    KF.c;
-    PDC(:,:,:,:,b) =    dynet_ar2pdc(KF,srate,fvec,opt.measure,opt.keepdiag,opt.flow);
-    
-end
-C   =    mean(CB,2); % C parameter indicates the dynamics of PDC over time
-
-%% (2) calculate directionality (Upwards) distributions using PDC dists
+[~,nch,nt]       =    size(epochs{1}); % get the size of data
+nsubj            =    numel(epochs);  % number of animals
 
 if nch == 12% If it is recorded from two rois
-    rnum = 2;
+    rnum    =   2;
 else
-    rnum = 1;
+    rnum    =   1;
+end
+lnum                =   round(nch/rnum); % number of layers/channels
+
+%% (1) Estimate PDCs for each animal
+disp('Calculating PDCs')
+
+parfor S = 1:nsubj %     
+    this_epochs = epochs {S}; % select the animal data
+
+    %  estimate MVAR coeffs using stok
+    KF             =    dynet_SSM_STOK(this_epochs(:,:,:),opt.ModOrds,opt.ff);  
+
+    %  estimate PDC based on MVAR coeffs
+    CB(:,S)        =    KF.c;% C parameter indicates the dynamics of PDC over time
+
+    PDC(:,:,:,:,S) =    dynet_ar2pdc(KF,srate,fvec,opt.measure,opt.keepdiag,opt.flow); % We cannot keep the PDC bootstraps because of memory issues :(, check what are the other possibilities
 end
 
-lnum = round(nch/rnum); % number of layers/channels
+%% (2) permute the PDC values
 
- for roi =1:rnum 
-     lInd        =      (1:lnum)+(roi-1)*lnum;
-     Data        =      PDC(lInd,lInd,:,:,:); 
-     
-     % Calculate directionality of the layers
-     Dir_layer          =    arrayfun(@(x) squeeze(mean(Data(1:x-1,x,:,:,:),1) - mean(Data(x+1:end,x,:,:,:),1)),1:lnum,'uni',false);
-     Direct_layer{roi}  =    permute(cat(4,Dir_layer{:}),[4 1:3]);
-     
-     % Directionality calculated using full connectivity matrix/ Not layer-specific
-     SD         =       size(Data);
-     DataR      =       reshape(Data,SD(1),SD(2),prod(SD(3:5)));
-     Dir_all    =       arrayfun(@(k) (sum(sum(triu(DataR(:,:,k)),1),2)-sum(sum(tril(DataR(:,:,k)),1),2))./(lnum*(lnum-1)/2),1:prod(SD(3:5)));
-     Direct_all{roi}    =   reshape(Dir_all,SD(3:5));
+parfor S = 1:nsubj
+    % (3) calculate directionalities (Upwards) for each animal and permutation using PDC values
 
- end
+    for roi =1:rnum 
+         lInd        =      (1:lnum)+(roi-1)*lnum;
+         Data        =      PDC(lInd,lInd,:,:,S); 
 
- DL = cat(1,Direct_layer{:});
- DA = permute(cat(4,Direct_all{:}),[4 1:3]);
+         % Calculate directionality of the layers: 2 to 5
+         Dir_layer          =    arrayfun(@(x) squeeze(mean(Data(1:x-1,x,:,:),1) - mean(Data(x+1:end,x,:,:),1)),2:lnum-1,'uni',false);
+         Direct_layer(:,:,:,S,roi)  =    permute(cat(3,Dir_layer{:}),[3 1:2]);
+
+         % Directionality calculated using full connectivity matrix/ Not layer-specific
+         SD         =       size(Data);
+         DataR      =       reshape(Data,SD(1),SD(2),prod(SD(3:4)));
+         Dir_all    =       arrayfun(@(k) (sum(sum(triu(DataR(:,:,k)),1),2)-sum(sum(tril(DataR(:,:,k)),1),2))./(lnum*(lnum-1)/2),1:prod(SD(3:4)));
+         Direct_all(:,:,S,roi)    =   reshape(Dir_all,SD(3:4));
+    end
+end
+
+DL = permute(Direct_layer,[1 5 2:4]); DL = reshape(DL,size(DL,1)*size(DL,2),size(DL,3),size(DL,4),size(DL,5));
+DA = permute(Direct_all,[4 1:3]);
  
- clear DataR Data Direct_layer Dir_all Direct_all;% clean up the memory
-%% (3) estimate frequency-wise pre-stimulus histogram
+clear DataR Data Direct_layer Dir_layer Dir_all Direct_all epochs;% clean up the memory
+ 
+%% (4) draw the bootstraps and : bootstrap over animals and trials
+disp('Bootstraping...')
+if isempty(opt.bootsize) % Size of bootstrap draw
+        opt.bootsize    =   nsubj;
+end
 
-% PDC for each channel pair (12 x 12 x fvec x tsec>0)
+if opt.nboot ==  1 % indicate the bootstrap draws
+    Boots          =    1:nsubj;
+else
+    Boots          =    randi(nsubj,opt.nboot,opt.bootsize);
+end
 
-% Direct_layers (12 x fvec x tsec>0): Refered as DL
 
-% Direct_all (2 x fvec x tsec>0): Refered as DA
+for bs = 1:opt.nboot % bootstrap over subjects/animals
+    if mod(bs,1)==100,     disp(['Bootsrap# ' num2str(bs)]);    end
+    
+    DL_boot(:,:,:,bs) = mean(DL(:,:,:,Boots(bs,:)),4);
+    DA_boot(:,:,:,bs) = mean(DA(:,:,:,Boots(bs,:)),4);
+end
 
-prestim_bootstats(squeeze(DA(1,:,:,:)),tsec)
+%% (5) Estimate frequency-wise pre-stimulus histogram and calculate stats based on that
+
+
+% Direction_layers ((12+2) x fvec x tsec>0):
+D_boot = cat(1,DL_boot,DA_boot);
+Layers_Names = [arrayfun(@(x) ['L' num2str(x) '_cS1'],2:5,'uni',false),...
+                arrayfun(@(x) ['L' num2str(x) '_iS1'],2:5,'uni',false),...
+                'All_cS1','All_iS1'];
+
+parfor x = 1:size(D_boot,1)
+    Direction_Stats(x) = prestim_bootstats(squeeze(D_boot(x,:,:,:)),tsec);
+end
+
+for x = 1:size(D_boot,1)
+    Direction_Stats(x).LName = Layers_Names{x};
+end
+
+
+%% (6) Calculate cluster-level statistics
+
+% will be the sum of sstats of the connected components 
+
+%% (7) indicate significant cluster using cluster-stat random distribution
+
+% make a histogram of Cluster stats of random perumted data and compare it
+% to unpermuted data
 
 end
 
