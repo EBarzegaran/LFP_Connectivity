@@ -48,8 +48,8 @@ for F = 1:(size(Data,1))
             Th      =   H(round(suprath*length(H)));
             
         case 'both'
-            Th(1)   =   H(round((1-suprath/2)*length(H)));
-            Th(2)   =   H(round((suprath/2)*length(H)));
+            Th(2)   =   H(round((1-suprath/2)*length(H)));
+            Th(1)   =   H(round((suprath/2)*length(H)));
         otherwise
             error ('uncorrect side option...')
     end
@@ -68,9 +68,9 @@ for F = 1:(size(Data,1))
                 p(F,pt)     =       sum(H<M2)./numel(H);
                 
             case 'both'
-                h(F,pt)     =       double(M2>Th(1) || M2<Th(2));
-                tstat(F,pt) =       (sum(H>=Th(1) & H<=M2)+sum(H<=Th(2) & H>=M2))./numel(H);
-                p(F,pt)     =       (sum(H>=M2 & H>=TH(1))+sum(H<=M2 & H<=TH(2)))./numel(H); %%%?? HOW SHUOLD THIS BE?
+                h(F,pt)     =       double(M2<Th(1) || M2>Th(2));
+                tstat(F,pt) =       (sum(H<=Th(1) & H>=M2)+sum(H>=Th(2) & H<=M2))./numel(H);
+                p(F,pt)     =       (sum(H>=M2 & H>=Th(2))+sum(H<=M2 & H<=Th(1)))./numel(H); %%%?? HOW SHUOLD THIS BE?
                 
         end    
         
