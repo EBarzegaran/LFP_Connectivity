@@ -9,12 +9,7 @@ function [PDC, fvec] = EstimatePDC_STOKS1_Group(Projfolder,varargin)
         'recalc'        ,false, ...
         'Normalize'     ,'All',...
         'Freqband'      ,[20 150],...
-        'SStat'         ,'Paired',...
-        'doStats'       ,false,...
         'NormPrestim'   ,false,...
-        'doPermute'     ,false,...
-        'typePermute'   ,'layers',...
-        'NPerm'         ,100,...
         'TimeWin'       ,[-100 100],...
         'figpath'       ,fullfile(Projfolder,'Results') ...
         );
@@ -68,11 +63,12 @@ function [PDC, fvec] = EstimatePDC_STOKS1_Group(Projfolder,varargin)
                             'flow',         flow);
         
         % just prepare PDC structure for the later analysis
-        for subj = 1:numel(animID)
-            PDC.(animID{subj})  =       pdc(:,:,:,:,subj);
+        for subj =      1:numel(animID)
+            PDC.(animID{subj})  =       pdc.PDC(:,:,:,:,subj);
+            C                   =       pdc.C;
         end
         %--------------------------- Save Results -------------------------
-        save(fullfile(Projfolder,SaveFileName),'PDC', 'fvec','tsec','labels','Direction_Stats');
+        save(fullfile(Projfolder,SaveFileName),'PDC','C', 'fvec','tsec','labels','Direction_Stats');
     else
         load(fullfile(Projfolder,SaveFileName));
     end
@@ -96,107 +92,8 @@ function [PDC, fvec] = EstimatePDC_STOKS1_Group(Projfolder,varargin)
     %% Plot the results: individuals and average layer connectivities
     
     if opt.plotfig
-        
-        if ~exist(opt.figpath,'dir') % prepare the folder for the results
-            mkdir(opt.figpath);
-        end
-        
-        TimeInd     =       (tsec>=-50) & (tsec<=60); % time window for plotting
-        
-        for subj    =       numel(animID):numel(animID)
-            Data    =       PDC.(animID{subj})(:,:,:,TimeInd);
-            
-            %---------- what kind of normalization to be done -------------
-            if strcmpi(opt.Normalize,'Channel')% (1) normalize over every single channel
-                Data    =      Data./repmat(max(max(Data,[],4),[],3),[1 1 size(Data,3) size(Data,4)]); 
-                
-            elseif strcmpi(opt.Normalize,'All')% (2) normalize over all channels
-                for ch  =      1:size(Data,1)
-                    Data(ch,ch,:,:) = 0;
-                end
-                Data    =      Data./max(Data(:));
-            end
-            
-            %------------plot individual animal resaults-------------------
-            if true
-                for roi = 1:2
-                    FIG  =      dynet_connplot(Data((1:6)+(roi-1)*6,(1:6)+(roi-1)*6,:,:),tsec(TimeInd),fvec,labels,ranges, [], [],1);
-                    if opt.NormPrestim, colormap(jmaColors('coolhotcortex'));end
-                    set(FIG,'unit','inch','position',[0 0 25 20],'color','w')
-                    export_fig(FIG,fullfile(opt.figpath,[SaveFigName '_' animID{subj} ROIs{roi}]),'-pdf');
-                    close;
-                end
-
-            end
-            close all;
-
-        end
-   
+        plot_PDC_LFP(PDC,C,tsec,fvec,[-50 60],animID,labels,ranges,ROIs,opt,SaveFigName);
     end
-    
-    %% Estimate UPWARD and DOWNWARD FCs
-    
-    Data        =       PDC.Average;
-    for ch      =       1:size(Data,1)
-        Data(ch,ch,:,:) = 0;
-    end
-    %% (1) node-wise analysis
-    load('LayerColors.mat');
-    LNames = arrayfun(@(x) ['L' num2str(x)],1:6,'uni',false);
-    %-----------------------Nodes outflows-----------------------------------
-    if opt.plotfig
-        lnum  = size(Data,1)/2;
-        for roi = 1:2
-            Fig1 = figure;
-            for i = 1:lnum
-                subplot(lnum,1,i);
-                for j  = 1:lnum
-                    SP(j)=plot(tsec,squeeze(mean(Data(j+(roi-1)*lnum,i+(roi-1)*lnum,:,:),3)),'color',Colors(j,:),'linewidth',2);
-                    hold on;
-                end
-                title(['L' num2str(i)]);
-                xlim([-50 60])
-                if opt.NormPrestim
-                    %ylim([-0.4 0.5])
-                else
-                    %ylim([0 .7])
-                end
-                vline([0],'k--')
-            end
-            legend(SP,LNames);
-            xlabel('Time (ms)');
-            ylabel('outPDC')
-            set(Fig1,'unit','inch','position',[2 0 15 20],'color','w')
-            export_fig(Fig1,fullfile(opt.figpath,[SaveFigName '_LayersOutflow_' ROIs{roi}]),'-pdf');
-        end
-    end
-
-    % -----------------------Average Outflows---------------------------------
-    if opt.plotfig
-        for roi = 1:2
-            lnum  = size(Data,1)/2;
-            Data2 = Data((1:lnum)+(roi-1)*lnum,(1:lnum)+(roi-1)*lnum,:,:);
-            PDCavgOut = arrayfun(@(x) squeeze(mean(Data2([1:x-1 x+1:end],x,:,:),1)),1:size(Data2,1),'uni',false);
-
-            Fig2 = figure;
-            line([-100 300],[0 0],'linestyle','--','color','k','linewidth',1.3);
-            hold on;
-            for i = 1:numel(PDCavgOut)
-                SP(i) = plot(tsec,mean(PDCavgOut{i},1),'color',Colors(i,:),'linewidth',2);
-            end
-            xlim([-50 60])
-            xlabel('Time (ms)')
-            vline([0],'k--')
-            legend(SP,arrayfun(@(x) ['L' num2str(x)],1:6,'uni',false));
-            set(gca,'fontsize',16);
-            set(gcf,'unit','inch','position',[2 5 15 5],'color','w');
-            title ('Average Outflow of layers')
-            export_fig(Fig2,fullfile(opt.figpath,[SaveFigName '_AveragewOutflow_' ROIs{roi}]),'-pdf');
-        end
-    end
-    close all;
-    
-    
 %% ---------------------------Directionality-----------------------------
 FS  =   12;
 if  opt.plotfig   

@@ -23,7 +23,8 @@ for F = 1:size(Data,1)
     for T = 1:size(Data,2)
         CI1(F,T)        =   quantile(Data(F,T,:),alpha/2);
         CI2(F,T)        =   quantile(Data(F,T,:),1-alpha/2);
-        MedianEst(F,T)  =   median(Data(F,T,(Data(F,T,:)>=CI1(F,T))&(Data(F,T,:)<=CI2(F,T))));% robust estimator based on median of 95% CI
+        %MedianEst(F,T)  =   median(Data(F,T,(Data(F,T,:)>=CI1(F,T))&(Data(F,T,:)<=CI2(F,T))));% robust estimator based on median of 95% CI
+        MedianEst(F,T)  =   median(Data(F,T,:));% robust estimator based on median of 95% CI
     end
 end
 

@@ -1,4 +1,4 @@
-function  [PDC, Direction_Stats]  =   bootstrap_PDC  (epochs,  srate,  fvec,   tsec,  varargin)
+function  [PDC_Results, Direction_Stats]  =   bootstrap_PDC  (epochs,  srate,  fvec,   tsec, labels, ROIs,  varargin)
 
 % This function calculates PDC based on STOK algorithm, and using
 % bootstrapping it estimnates the significant results.
@@ -116,17 +116,24 @@ end
 
 PDC_Mboot               =   PDC_Mboot/opt.nboot;
 PDC(:,:,:,:,end+1)      =   PDC_Mboot;
+PDC_Results.PDC = PDC;
+PDC_Results.C = CB;
 %% (5) Estimate frequency-wise pre-stimulus histogram and calculate stats based on that
 
 
 % Direction_layers ((12+2) x fvec x tsec>0):
 D_boot          =   cat(1,DL_boot,DA_boot);
-Layers_Names    =   [arrayfun(@(x) ['L' num2str(x) '_cS1'],2:5,'uni',false),...
-                    arrayfun(@(x) ['L' num2str(x) '_iS1'],2:5,'uni',false),...
-                    'All_cS1','All_iS1'];
+Layers_Names = [];
+for roi = 1:rnum
+    Layers_Names = [Layers_Names cellfun(@(x) [x '_' ROIs{roi}],labels(2:5),'uni',false)];
+end
+for roi = 1:rnum
+    Layers_Names    = [Layers_Names ['All_' ROIs{roi}]];
+end
+
 
 parfor x = 1:size(D_boot,1)
-    Direction_Stats(x) = prestim_bootstats(squeeze(D_boot(x,:,:,:)),tsec,.25,'side','both');
+    Direction_Stats(x) = prestim_bootstats(squeeze(D_boot(x,:,:,:)),tsec,.05,'side','right');
 end
 
 for x = 1:size(D_boot,1)
