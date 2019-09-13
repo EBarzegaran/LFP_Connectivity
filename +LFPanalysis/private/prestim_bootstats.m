@@ -1,12 +1,16 @@
 function Stats = prestim_bootstats(Data,tsec,suprath,side)
-
+%
+% This function calculasted the statistics based on prestimulus bootstrap
+% distribution
+% Syntax: Stats = prestim_bootstats(Data,tsec,suprath,side)
+%-------------------------------------------------------------
 %  INPUTs:
 %  - Data: Is a freq x time x bootstraps matrix
 %  - tsec: Indicates the time (zero for stim onset) in ms
 %  - suprath: The supra-threshold for prestim significance indication
 %  - side: direction of hypothesis testing: ['right'] or 'left' or 'both'  
 %--------------------------------------------------------------------------
-% Author: Elham Barzegaran, 11/09/2019
+% Author: Elham Barzegaran, 09/2019
 %
 %% default values
 

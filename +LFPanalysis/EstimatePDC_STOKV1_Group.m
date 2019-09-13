@@ -1,5 +1,36 @@
 function [PDC, Direction_Stats,fvec,tsec] = EstimatePDC_STOKV1_Group(Projfolder,varargin)
-
+%
+% This function reads the LFP files (preprocessed in .mat format) 
+% from mouse V1 dataset stored in Projectfolder and then (1) estimates PDC
+% values based on STOK algorithm, (2) apply bootstrapping and (3) estimate
+% the directionality and (4) returns the significant results. (5) It also
+% visualize the PDC and directionality results.
+%
+% Syntax: [PDC, Direction_Stats,fvec,tsec] = EstimatePDC_STOKV1_Group(Projfolder,varargin)
+%--------------------------------------------------------------------------
+%
+% INPUT
+% - Projectfolder: where the LFP files are stored (output of LFPanalysis.getLFPsV1.m)
+% - <OPTIONS>
+% - 'IDs':          The animal IDs that needs to be incldued in the analysis: default is all the data: default all
+% - 'plotfig':      If the figures should be plotted and saved, default: true
+% - 'ModOrds':      Model order for AR coefficient estimation using STOK, default: [15]
+% - 'Cnd':          Experiment condition (check dataset info in plomp et al, 2017), default: [6]
+% - 'recalc'        Recalculate the PDC and stats, or load it if it is calculated and saved before [true]/false
+% - 'StatSide':     Direction of hypothesis testing: ['right'] or 'left' or 'both'  
+% - 'Normalize':    Normalize over all channels or separately for each: ['All']/'Channel'
+% - 'NormPrestim':  Normalize PDCs based on prestimulus values (Just remove the mean)
+% - 'Freqband':     Frequency band to be used for analysis, default: [5 150]
+% - 'TimeWin':      Time window to be used for analysis, default: [-200 300]
+% - 'figpath':      Path to store the figures, default in a folder Results
+%--------------------------------------------------------------------------
+% OUTPUT
+% - PDC:            PDC values
+% - Direction_Stats:Directionalities and their statistics
+% - fvec:           Vector containing frequency indices (Hz)
+% - tsec:           Vector containig time indices (ms)
+%--------------------------------------------------------------------------
+% Author: Elham Barzegaran, 9/2019
 %% set default values
     opt = ParseArgs(varargin, ...
         'IDs'           ,[],...

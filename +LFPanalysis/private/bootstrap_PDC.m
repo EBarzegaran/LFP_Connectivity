@@ -3,6 +3,8 @@ function  [PDC_Results, Direction_Stats]  =   bootstrap_PDC  (epochs,  srate,  f
 % This function calculates PDC based on STOK algorithm, and using
 % bootstrapping it estimnates the significant results.
 % ********** Later I might add cluster-based permutation test to this analysis
+%
+% Syntax: [PDC_Results, Direction_Stats]  =   bootstrap_PDC  (epochs,  srate,  fvec,   tsec, labels, ROIs,  varargin)
 % -------------------------------------------------------------------------
 % INPUTS
 % - epochs:     A cell array (size = number of subjects) of matrices, containing trial x channel x  time matrix
@@ -27,7 +29,7 @@ function  [PDC_Results, Direction_Stats]  =   bootstrap_PDC  (epochs,  srate,  f
 %                    CI:     confidence interval of the bootstraps
 %                    PostStim:  stats calculated by comparing pre and post bootstrap distributions
 %--------------------------------------------------------------------------
-% Author: Elham Barzegaran, 11/09/2019
+% Author: Elham Barzegaran, 09/2019
 %
 %% Default values
 
