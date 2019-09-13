@@ -7,6 +7,7 @@ function [PDC, Direction_Stats,fvec,tsec] = EstimatePDC_STOKV1_Group(Projfolder,
         'ModOrds'       ,15,...
         'Cnd'           , 6, ...
         'recalc'        ,false, ...
+        'StatSide'      ,'right',...    % right or left or both
         'Normalize'     ,'All',...
         'NormPrestim'   ,false,...
         'Freqband'      ,[5 150],...
@@ -26,7 +27,7 @@ function [PDC, Direction_Stats,fvec,tsec] = EstimatePDC_STOKV1_Group(Projfolder,
     animID{end+1} =     'Average';
     
     opt.Freqband    =       round(opt.Freqband); % Round the frequency band for now
-    SaveFileName    =       ['PDCSTOK_Cnd' num2str(opt.Cnd) '_MORD' num2str(opt.ModOrds)];
+    SaveFileName    =       ['PDCSTOK_Cnd' num2str(opt.Cnd) '_MORD' num2str(opt.ModOrds) '_' opt.StatSide];
     ROIs            =       {'V1'};
 %% Estimate MVAR parameters using STOK algorithm
     
@@ -64,7 +65,8 @@ function [PDC, Direction_Stats,fvec,tsec] = EstimatePDC_STOKV1_Group(Projfolder,
                             'ff',           ff,...
                             'measure',      measure,...
                             'keepdiag',     keepdiag,...
-                            'flow',         flow);
+                            'flow',         flow,...
+                            'StatSide',     opt.StatSide);
         
         % just prepare PDC structure for the later analysis
         for subj    =       1:numel(animID)
@@ -95,7 +97,7 @@ function [PDC, Direction_Stats,fvec,tsec] = EstimatePDC_STOKV1_Group(Projfolder,
     %% Plot the results: individuals and average layer connectivities
     
     if opt.plotfig
-        %LFPanalysis.plot_PDC_LFP(PDC,C,tsec,fvec,[-100 300],animID,labels,ranges,ROIs,opt,SaveFigName)
+        LFPanalysis.plot_PDC_LFP(PDC,C,tsec,fvec,[-100 300],animID,labels,ranges,ROIs,opt,SaveFigName)
         LFPanalysis.plot_PDC_Directionality(Direction_Stats,tsec,fvec,[-100 300],labels,ROIs,opt,SaveFigName)
     end
 

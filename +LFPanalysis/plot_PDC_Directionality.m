@@ -3,7 +3,7 @@ function plot_PDC_Directionality(Direction_Stats,tsec,fvec,tWin,labels,ROIs,opt,
 %%
 FS  =   12;
 load LayerColors.mat 
-lnum     =   numel(labels)/numel(ROIs); %%%%%
+lnum     =   numel(labels); %%%%%
 for roi     =   1:numel(ROIs) % for each hemi
    
 

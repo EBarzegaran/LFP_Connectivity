@@ -37,7 +37,8 @@ opt = ParseArgs(varargin, ...
         'ff'            ,.99, ...       % percent of variance too keep in STOK algorithm
         'measure'       ,'PDCnn', ...   % options: 'PDCnn' , 'PDC', 'sPDC', for more info see function: dynet_ar2pdc 
         'keepdiag'      ,1, ...         % 
-        'flow'          ,2 ...          % 1 col, 2 row-wise normalization 
+        'flow'          ,2, ...          % 1 col, 2 row-wise normalization 
+        'StatSide'      ,'right'...
         );
 
 [~,nch,nt]       =    size(epochs{1}); % get the size of data
@@ -65,7 +66,7 @@ parfor S = 1:nsubj %
     PDC(:,:,:,:,S) =    dynet_ar2pdc(KF,srate,fvec,opt.measure,opt.keepdiag,opt.flow); % We cannot keep the PDC bootstraps because of memory issues :(, check what are the other possibilities
 end
 
-%% (2) permute the PDC values
+%% (2) permute the PDC values/ for permutation test
 
 parfor S = 1:nsubj
     % (3) calculate directionalities (Upwards) for each animal and permutation using PDC values
@@ -133,7 +134,7 @@ end
 
 
 parfor x = 1:size(D_boot,1)
-    Direction_Stats(x) = prestim_bootstats(squeeze(D_boot(x,:,:,:)),tsec,.05,'side','right');
+    Direction_Stats(x) = prestim_bootstats(squeeze(D_boot(x,:,:,:)),tsec,.05/2,'side',lower(opt.StatSide));
 end
 
 for x = 1:size(D_boot,1)
