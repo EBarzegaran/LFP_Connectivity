@@ -28,6 +28,7 @@ function  [PDC_Results, Direction_Stats]  =   bootstrap_PDC  (epochs,  srate,  f
 %                    PostStim:  stats calculated by comparing pre and post bootstrap distributions
 %--------------------------------------------------------------------------
 % Author: Elham Barzegaran, 11/09/2019
+%
 %% Default values
 
 opt = ParseArgs(varargin, ...
@@ -76,7 +77,7 @@ parfor S = 1:nsubj
          Data        =      PDC(lInd,lInd,:,:,S); 
 
          % Calculate directionality of the layers: 2 to 5
-         Dir_layer          =    arrayfun(@(x) squeeze(mean(Data(1:x-1,x,:,:),1) - mean(Data(x+1:end,x,:,:),1)),2:lnum-1,'uni',false);
+         Dir_layer   =    arrayfun(@(x) squeeze(mean(Data(1:x-1,x,:,:),1) - mean(Data(x+1:end,x,:,:),1)),2:lnum-1,'uni',false);
          Direct_layer(:,:,:,S,roi)  =    permute(cat(3,Dir_layer{:}),[3 1:2]);
 
          % Directionality calculated using full connectivity matrix/ Not layer-specific
@@ -123,22 +124,22 @@ PDC_Results.C = CB;
 
 
 % Direction_layers ((12+2) x fvec x tsec>0):
-D_boot          =   cat(1,DL_boot,DA_boot);
+D_boot              =   cat(1,DL_boot,DA_boot);
 Layers_Names = [];
 for roi = 1:rnum
-    Layers_Names = [Layers_Names cellfun(@(x) [x '_' ROIs{roi}],labels(2:5),'uni',false)];
+    Layers_Names    =   [Layers_Names cellfun(@(x) [x '_' ROIs{roi}],labels(2:5),'uni',false)];
 end
 for roi = 1:rnum
-    Layers_Names    = [Layers_Names ['All_' ROIs{roi}]];
+    Layers_Names    =   [Layers_Names ['All_' ROIs{roi}]];
 end
 
 
 parfor x = 1:size(D_boot,1)
-    Direction_Stats(x) = prestim_bootstats(squeeze(D_boot(x,:,:,:)),tsec,.05/2,'side',lower(opt.StatSide));
+    Direction_Stats(x)          =   prestim_bootstats(squeeze(D_boot(x,:,:,:)),tsec,.05/2,lower(opt.StatSide));% make the suprathreshold an input param
 end
 
 for x = 1:size(D_boot,1)
-    Direction_Stats(x).LName = Layers_Names{x};
+    Direction_Stats(x).LName    =   Layers_Names{x};
 end
 
 
