@@ -57,16 +57,41 @@ lnum                =   round(nch/rnum); % number of layers/channels
 %% (1) Estimate PDCs for each animal
 disp('Calculating PDCs')
 
-parfor S = 1:nsubj %     
+for S = 1:nsubj %     
     this_epochs = epochs {S}; % select the animal data
 
     %  estimate MVAR coeffs using stok
-    KF             =    dynet_SSM_STOK(this_epochs(:,:,:),opt.ModOrds,opt.ff);  
-
+    M1 = max(max(abs(mean(this_epochs(:,:,tsec>0)))));
+    M2 = max(max(abs(mean(this_epochs(:,:,tsec<0)))));
+    M1/M2
+        
+     if M1/M2>10 % if the SNR is too high STOK cannot tune the C parameter properly
+         fac = (0:3:30)*M2;
+     else
+        fac = 0;
+     end
+    
+    parfor f = 1:numel(fac)
+        Data              =    this_epochs(:,:,:)+rand(size(this_epochs))*fac(f);
+        KF(f)             =    dynet_SSM_STOK(Data,opt.ModOrds,opt.ff);  
+        Err(f)            =    sqrt(sum((KF(f).c(100:end)-KF(f).cu(100:end)).^2));
+        
+        M1 = max(max(abs(mean(Data(:,:,tsec>0)))));
+        M2 = max(max(abs(mean(Data(:,:,tsec<0)))));
+        SNR(f) = M1/M2;
+    end
+    
+    % what SNR level to choose?
+    if numel(fac)>1
+        snr = min(find(diff(Err)==0));
+        SNR(snr)
+    else
+        snr = 1;
+    end
+    
     %  estimate PDC based on MVAR coeffs
-    CB(:,S)        =    KF.c;% C parameter indicates the dynamics of PDC over time
+    PDC(:,:,:,:,S) =    dynet_ar2pdc(KF(snr),srate,fvec,opt.measure,opt.keepdiag,opt.flow); % We cannot keep the PDC bootstraps because of memory issues :(, check what are the other possibilities
 
-    PDC(:,:,:,:,S) =    dynet_ar2pdc(KF,srate,fvec,opt.measure,opt.keepdiag,opt.flow); % We cannot keep the PDC bootstraps because of memory issues :(, check what are the other possibilities
 end
 
 %% (2) permute the PDC values/ for permutation test

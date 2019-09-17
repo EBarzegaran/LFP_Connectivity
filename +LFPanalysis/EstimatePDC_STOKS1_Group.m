@@ -110,21 +110,21 @@ function [PDC, Direction_Stats,fvec,tsec] = EstimatePDC_STOKS1_Group(Projfolder,
     if opt.NormPrestim
         IndNorm     =       find(tsec<0);
         IndNorm     =       IndNorm(100:end); % to remove the unstable part of the PDCs
-         for subj   =       1:numel(animID)+1
+        for subj    =       1:numel(animID)+1
             PDC.(animID{subj})  =       (PDC.(animID{subj})-mean(PDC.(animID{subj})(:,:,:,IndNorm),4));
-         end
-         
-         SaveFigName =      [SaveFileName '_NormPrestim']; % Figure Names
-         ranges      =      [-1 1];                       % range for plotting using dynet_connplot
+        end
+
+        SaveFigName =      [SaveFileName '_NormPrestim']; % Figure Names
+        ranges      =      [-1 1];                       % range for plotting using dynet_connplot
     else
-        SaveFigName  =      SaveFileName;
-        ranges       =      [0 1];
+        SaveFigName =      SaveFileName;
+        ranges      =      [0 1];
     end
 
     %% Plot the results: individuals and average layer connectivities
     
     if opt.plotfig
-        LFPanalysis.plot_PDC_LFP(PDC,C,tsec,fvec,[-50 60],animID,labels,ranges,ROIs,opt,SaveFigName)
+        %LFPanalysis.plot_PDC_LFP(PDC,C,tsec,fvec,[-50 60],animID,labels,ranges,ROIs,opt,SaveFigName)
         LFPanalysis.plot_PDC_Directionality(Direction_Stats,tsec,fvec,[-50 60],labels,ROIs,opt,SaveFigName)
     end
 

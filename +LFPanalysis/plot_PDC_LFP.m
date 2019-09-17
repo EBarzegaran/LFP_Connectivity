@@ -64,7 +64,7 @@ function plot_PDC_LFP(PDC,C,tsec,fvec,tWin,animID,labels,ranges,ROIs,opt,SaveFig
     end
 %% (1) node-wise outflow results
     load('LayerColors.mat');
-    LNames = labels(1:numel(labels)/numel(ROIs));
+    LNames = labels;
     %-----------------------Nodes outflows-----------------------------------
     lnum  = size(Data,1)/numel(ROIs);
     for roi = 1:numel(ROIs)
@@ -88,14 +88,14 @@ function plot_PDC_LFP(PDC,C,tsec,fvec,tWin,animID,labels,ranges,ROIs,opt,SaveFig
 
     % -----------------------Average Outflows---------------------------------
     for roi = 1:numel(ROIs)
-        Data2 = Data((1:lnum)+(roi-1)*lnum,(1:lnum)+(roi-1)*lnum,:,:);
-        PDCavgOut = arrayfun(@(x) squeeze(mean(Data2([1:x-1 x+1:end],x,:,:),1)),1:size(Data2,1),'uni',false);
+        Data2       =       Data((1:lnum)+(roi-1)*lnum,(1:lnum)+(roi-1)*lnum,:,:);
+        PDCavgOut   =       arrayfun(@(x) squeeze(mean(Data2([1:x-1 x+1:end],x,:,:),1)),1:size(Data2,1),'uni',false);
 
-        Fig2 = figure;
+        Fig2        =       figure;
         line(tWin,[0 0],'linestyle','--','color','k','linewidth',1.3);
         hold on;
-        for i = 1:numel(PDCavgOut)
-            SP(i) = plot(tsec,mean(PDCavgOut{i},1),'color',Colors(i,:),'linewidth',2);
+        for i       =       1:numel(PDCavgOut)
+            SP(i)   =       plot(tsec,mean(PDCavgOut{i},1),'color',Colors(i,:),'linewidth',2);
         end
         xlim([tWin(1) tWin(2)])
         xlabel('Time (ms)')

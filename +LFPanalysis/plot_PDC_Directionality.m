@@ -41,8 +41,12 @@ for roi     =   1:numel(ROIs) % for each hemi
         TP = TP(:,ind);
         imagesc(Dataplot,'alphadata',TP*.5+.5);
         axis xy;
-        xtickso = find(ismember(tseccorr,[tWin(1):30:0 0:30:tWin(2)]));
-        set(gca,'xtick',xtickso,'xticklabel',tseccorr(xtickso),'ytick',1:40:numel(fvec),'yticklabel',fvec(1:40:end));
+        interv  = round(round((tWin(2)-tWin(1))/5)/10)*10;
+        a = .2;
+        par1 = 0:-interv:tWin(1);
+        xtickso = find(ismember(round(tseccorr/a)*a,[par1(end:-1:1) 0:interv:tWin(2)]));
+        xtickso(diff(xtickso)==1)=[];
+        set(gca,'xtick',xtickso,'xticklabel',round(tseccorr(xtickso)),'ytick',1:40:numel(fvec),'yticklabel',fvec(1:40:end));
         M = max(abs(Dataplot(:)));
         caxis([-M M]);
         %caxis([-.2 .2]);
@@ -72,7 +76,11 @@ for roi     =   1:numel(ROIs) % for each hemi
     Fig3 = figure;
     imagesc(Dataplot,'alphadata',TP*.5+.5);
     axis xy;
-    xtickso = find(ismember(tseccorr,[tWin(1):30:0 0:30:tWin(2)]));
+    interv  = round(round((tWin(2)-tWin(1))/5)/10)*10;
+    a = .2;
+    par1 = 0:-interv:tWin(1);
+    xtickso = find(ismember(round(tseccorr/a)*a,[par1(end:-1:1) 0:interv:tWin(2)]));
+    xtickso(diff(xtickso)==1)=[];
     set(gca,'xtick',xtickso,'xticklabel',tseccorr(xtickso),'ytick',1:40:numel(fvec),'yticklabel',fvec(1:40:end));
     M = max(abs(Dataplot(:)));
     caxis([-M M]);
