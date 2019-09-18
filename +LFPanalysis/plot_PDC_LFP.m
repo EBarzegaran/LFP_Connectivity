@@ -42,7 +42,7 @@ function plot_PDC_LFP(PDC,C,tsec,fvec,tWin,animID,labels,ranges,ROIs,opt,SaveFig
             end
             vline(0,'k--')
             xlim([tWin(1) tWin(2)])
-            legend(animID)
+            legend(strrep(animID,'_','-'));
             title('C Parameter')
             set(gca,'fontsize',12)
             

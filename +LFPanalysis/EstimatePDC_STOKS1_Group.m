@@ -124,7 +124,7 @@ function [PDC, Direction_Stats,fvec,tsec] = EstimatePDC_STOKS1_Group(Projfolder,
     %% Plot the results: individuals and average layer connectivities
     
     if opt.plotfig
-        %LFPanalysis.plot_PDC_LFP(PDC,C,tsec,fvec,[-50 60],animID,labels,ranges,ROIs,opt,SaveFigName)
+        LFPanalysis.plot_PDC_LFP(PDC,C,tsec,fvec,[-50 60],animID,labels,ranges,ROIs,opt,SaveFigName)
         LFPanalysis.plot_PDC_Directionality(Direction_Stats,tsec,fvec,[-50 60],labels,ROIs,opt,SaveFigName)
     end
 
