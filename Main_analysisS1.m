@@ -1,8 +1,10 @@
 % Main script for analysis of Rat S1 LFP data, for more info on the
 % dataset please see: Plomp, et al. 2014, EJN
+% This script can work faster if you have parallel processing toolbox
 
 % Author: Elham Barzegaran, August, 2019
         % e.barzegaran@gmail.com
+% Latest update: EB, September 30, 2019
 %% Add toolboxes
 clear; clc;
 mac = true;

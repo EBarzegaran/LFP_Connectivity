@@ -1,5 +1,8 @@
 function plot_PDC_Directionality(Direction_Stats,tsec,fvec,tWin,labels,ROIs,opt,SaveFigName)
 
+% this function plots directionality results:
+% Works with bootstrapping results!
+
 %%
 FS  =   12;
 load LayerColors.mat 

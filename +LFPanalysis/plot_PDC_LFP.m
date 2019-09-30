@@ -107,4 +107,5 @@ function plot_PDC_LFP(PDC,C,tsec,fvec,tWin,animID,labels,ranges,ROIs,opt,SaveFig
         export_fig(Fig2,fullfile(opt.figpath,[SaveFigName '_AveragewOutflow_' ROIs{roi}]),'-pdf');
     end
     close all;
+
 end

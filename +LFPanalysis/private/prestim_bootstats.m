@@ -1,6 +1,6 @@
 function Stats = prestim_bootstats(Data,tsec,suprath,side)
 %
-% This function calculasted the statistics based on prestimulus bootstrap
+% This function calculasted the PDC/diorectionality statistics based on prestimulus bootstrap
 % distribution
 % Syntax: Stats = prestim_bootstats(Data,tsec,suprath,side)
 %-------------------------------------------------------------
@@ -29,14 +29,14 @@ alpha   =   .05;
 
 for F = 1:size(Data,1)
     for T = 1:size(Data,2)
-        CI1(F,T)        =   quantile(Data(F,T,:),alpha/2);
-        CI2(F,T)        =   quantile(Data(F,T,:),1-alpha/2);
+%         CI1(F,T)        =   quantile(Data(F,T,:),alpha/2);
+%         CI2(F,T)        =   quantile(Data(F,T,:),1-alpha/2);
         MedianEst(F,T)  =   median(Data(F,T,:));
         % Other option can be: in case of bias in distribution: robust estimator based on 25% trimmed mean
     end
 end
 
-Stats.CI        =   cat(3,CI1,CI2);
+Stats.CI        =   [];%cat(3,CI1,CI2);
 Stats.Median    =   MedianEst;
 
 
