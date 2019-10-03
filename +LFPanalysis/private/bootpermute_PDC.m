@@ -61,7 +61,7 @@ lnum                =   round(nch/rnum); % number of layers/channels
 
 if opt.DoPerm % does either bootstrapping or permutation
     if isempty(opt.NPerm)
-        opt.NPerm = 500;
+        opt.NPerm = 100;
     end
     opt.nboot = 1;
 else
@@ -234,11 +234,13 @@ else
     PDC_Results.C           =   CB;
     
     % (4) Permutation test with cluster-level stats
-    D              =   cat(1,DL,DA);
-    parfor x = 1:size(D,1)
-        Direction_Stats(x)          =   permute_stats(D(x,:,:,:),tsec,.05/2,lower(opt.StatSide));
+    %D              =   cat(1,DL,DA);
+    parfor x = 1:size(DL,1)
+        Direction_Stats(x)          =   permute_stats(DL(x,:,:,:),tsec,.05/2,lower(opt.StatSide));
     end
     
+    Direction_Stats(size(DL,1)+1)          =   permute_stats(DA(1,:,:,:),tsec,.05/2,lower(opt.StatSide));
+    Direction_Stats(size(DL,1)+2)          =   permute_stats(DA(2,:,:,:),tsec,.05/2,lower(opt.StatSide));
     
 end
 

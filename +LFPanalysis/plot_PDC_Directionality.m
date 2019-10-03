@@ -1,4 +1,4 @@
-function plot_PDC_Directionality(Direction_Stats,tsec,fvec,tWin,labels,ROIs,opt,SaveFigName)
+function plot_PDC_Directionality(Direction_Stats,tsec,fvec,tWin,labels,ROIs,opt,SaveFigName,StatType)
 
 % this function plots directionality results:
 % Works with bootstrapping results!
@@ -38,11 +38,18 @@ for roi     =   1:numel(ROIs) % for each hemi
         SP(i-1)     =       subplot(4,1,i-1);
         LIdx        =       find(strcmp({Direction_Stats.LName},[labels{i} '_' ROIs{roi}]));
         Dataplot    =       Direction_Stats(LIdx).Median(:,ind);
-        Transplot   =       Direction_Stats(LIdx).PostStim.h;
         TP = zeros(size(Direction_Stats(LIdx).Median));
-        TP(:,tsec2) = Transplot;
+        if strcmp(StatType,'bootstrap')
+            Transplot   =       Direction_Stats(LIdx).PostStim.h;          
+            TP(:,tsec2) = Transplot;
+        elseif strcmp(StatType,'permutation')
+            SigCs = [Direction_Stats(LIdx).Clusters.p{:}]<.05; % Find significant clusters
+            Nodes   =       Direction_Stats(LIdx).Clusters.nodes(SigCs); 
+            Nodes = cat(1,Nodes{:});
+            TP(Nodes) = 1;
+        end
         TP = TP(:,ind);
-        imagesc(Dataplot,'alphadata',TP*.5+.5);
+        imagesc(Dataplot,'alphadata',TP*.7+.3);
         axis xy;
         interv  = round(round((tWin(2)-tWin(1))/5)/10)*10;
         a = .2;
@@ -71,13 +78,22 @@ for roi     =   1:numel(ROIs) % for each hemi
 
     LIdx        =       find(strcmp({Direction_Stats.LName},['All_' ROIs{roi}]));
     Dataplot    =       Direction_Stats(LIdx).Median(:,ind);
-    Transplot   =       Direction_Stats(LIdx).PostStim.h;
     TP = zeros(size(Direction_Stats(LIdx).Median));
-    TP(:,tsec2) = Transplot;
+    
+    if strcmp(StatType,'bootstrap')
+        Transplot   =       Direction_Stats(LIdx).PostStim.h;          
+        TP(:,tsec2) = Transplot;
+    elseif strcmp(StatType,'permutation')
+        SigCs = [Direction_Stats(LIdx).Clusters.p{:}]<.05; % Find significant clusters
+        Nodes   =       Direction_Stats(LIdx).Clusters.nodes(SigCs); 
+        Nodes = cat(1,Nodes{:});
+        TP(Nodes) = 1;
+    end
+
     TP = TP(:,ind);
 
     Fig3 = figure;
-    imagesc(Dataplot,'alphadata',TP*.5+.5);
+    imagesc(Dataplot,'alphadata',TP*.7+.3);
     axis xy;
     interv  = round(round((tWin(2)-tWin(1))/5)/10)*10;
     a = .2;

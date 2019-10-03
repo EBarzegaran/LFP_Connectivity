@@ -17,6 +17,7 @@ function [PDC, Direction_Stats,fvec,tsec] = EstimatePDC_STOKS1_Group(Projfolder,
 % - 'plotfig':      If the figures should be plotted and saved, default: true
 % - 'ModOrds':      Model order for AR coefficient estimation using STOK, default: [15]
 % - 'recalc'        Recalculate the PDC and stats, or load it if it is calculated and saved before [true]/false
+% - 'StatType'      ['permutation']/'bootstrap'
 % - 'StatSide':     Direction of hypothesis testing: ['right'] or 'left' or 'both'  
 % - 'Normalize':    Normalize over all channels or separately for each: ['All']/'Channel'
 % - 'NormPrestim':  Normalize PDCs based on prestimulus values (Just remove the mean)
@@ -37,6 +38,7 @@ function [PDC, Direction_Stats,fvec,tsec] = EstimatePDC_STOKS1_Group(Projfolder,
         'plotfig'       ,true, ...
         'ModOrds'       ,15,...
         'recalc'        ,false, ...
+        'StatType'      ,'permutation',... % or 'bootstrap'
         'StatSide'      ,'right',...
         'Normalize'     ,'All',...
         'Freqband'      ,[20 150],...
@@ -51,7 +53,7 @@ function [PDC, Direction_Stats,fvec,tsec] = EstimatePDC_STOKS1_Group(Projfolder,
     animID{end+1} =     'Average';
     
     opt.Freqband =      round(opt.Freqband); % Round the frequency band for now
-    SaveFileName =      ['PDCSTOK_MORD' num2str(opt.ModOrds) '_' opt.StatSide];
+    SaveFileName =      ['PDCSTOK_MORD' num2str(opt.ModOrds) '_' opt.StatSide '_' opt.StatType];
     ROIs         =      {'cS1','iS1'};
     
 %% Estimate MVAR and PDC parameters using STOK algorithm -> 
@@ -84,11 +86,17 @@ function [PDC, Direction_Stats,fvec,tsec] = EstimatePDC_STOKS1_Group(Projfolder,
         
         %----------------- Estimate MVAR params and PDC -------------------
         epochs  =       cellfun(@(x) x(:,:,tvec),epochs,'uni',false); % select the time window 
-        % estimate PDC, directionalities using bootstraping
+        % estimate PDC, directionalities using bootstraping or permutation
+        if strcmpi(opt.StatType,'permutation') % bootstrap or permutation?
+            DoPerm = true;
+        else
+            DoPerm = false;
+        end
+        
         [pdc,Direction_Stats]  =       bootpermute_PDC(epochs,srate,fvec,tsec, labels, ROIs,...
                             'nboot',        50,...
                             'ModOrds',      opt.ModOrds,...
-                            'DoPerm',    true,...
+                            'DoPerm',       DoPerm,...
                             'ff',           ff,...
                             'measure',      measure,...
                             'keepdiag',     keepdiag,...
@@ -103,10 +111,37 @@ function [PDC, Direction_Stats,fvec,tsec] = EstimatePDC_STOKS1_Group(Projfolder,
         end
         %--------------------------- Save Results -------------------------
         save(fullfile(Projfolder,SaveFileName),'PDC','C', 'fvec','tsec','labels','Direction_Stats');
-    else
-        load(fullfile(Projfolder,SaveFileName));
+%     else
+%         load(fullfile(Projfolder,SaveFileName));
     end
     
+    %% Prepare the data for visualization (combine permutation and bootstrapping results)
+    if strcmpi(opt.StatType,'permutation') 
+        % read cluster-based permutation test results
+        try
+            load(fullfile(Projfolder,['PDCSTOK_MORD' num2str(opt.ModOrds) '_' opt.StatSide '_permutation']));
+        catch
+            error('Run permutation statistics first');
+        end
+
+        for l = 1:numel(Direction_Stats) 
+            Clusters(l).nodes = Direction_Stats(l).Clusters;
+            Clusters(l).p = Direction_Stats(l).ClustersP;
+        end
+        % read bootstrap results
+        try
+            load(fullfile(Projfolder,['PDCSTOK_MORD' num2str(opt.ModOrds) '_' opt.StatSide '_bootstrap.mat']));
+        catch
+            error('Run bootstrapping first');
+        end
+
+        for l = 1:numel(Direction_Stats) 
+            Direction_Stats(l).Clusters = Clusters(l);
+        end
+    else
+        % just read bootstrap results
+        load(fullfile(Projfolder,['PDCSTOK_MORD' num2str(opt.ModOrds) '_' opt.StatSide '_bootstrap.mat']));
+    end
     %% Normalize PDC values using prestim PDCs : just for the sake of visualization -> not included in directionality analysis
     
     if opt.NormPrestim
@@ -126,8 +161,8 @@ function [PDC, Direction_Stats,fvec,tsec] = EstimatePDC_STOKS1_Group(Projfolder,
     %% Plot the results: individuals and average layer connectivities
     
     if opt.plotfig
-        LFPanalysis.plot_PDC_LFP(PDC,C,tsec,fvec,[-50 60],animID,labels,ranges,ROIs,opt,SaveFigName)
-        LFPanalysis.plot_PDC_Directionality(Direction_Stats,tsec,fvec,[-50 60],labels,ROIs,opt,SaveFigName)
+        %LFPanalysis.plot_PDC_LFP(PDC,C,tsec,fvec,[-50 60],animID,labels,ranges,ROIs,opt,SaveFigName)
+        LFPanalysis.plot_PDC_Directionality(Direction_Stats,tsec,fvec,[-50 60],labels,ROIs,opt,SaveFigName,opt.StatType);
     end
 
 end
